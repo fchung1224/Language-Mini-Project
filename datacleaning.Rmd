@@ -9,7 +9,6 @@ library(ggplot2)
 library(dplyr)
 library(keras)
 library(purrr)
-library(tm)
 # library(RTextTools)
 library(e1071)
 library(doMC)
@@ -39,6 +38,10 @@ buzzfeed3 <- buzzfeed2 %>%
 
 ```{r}
 #glimpse(buzzfeed)
+buzzfeed3
+buzzfeed3%>%
+  group_by(source,type)%>%
+  summarise(n())
 ```
 
 ```{r}
