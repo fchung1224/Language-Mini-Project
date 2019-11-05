@@ -16,6 +16,7 @@ library(doMC)
 registerDoMC(cores=detectCores())
 library(stringr)
 library(SentimentAnalysis)
+library(searchable)
 ```
 
 ```{r}
@@ -61,5 +62,15 @@ buzzfeed_final_ish <- buzzfeed3 %>%
   mutate(title_length = lengths(title)) %>%
   select(title, text, authors, source,type,WordCount,text_length,title_length,SentimentGI,NegativityGI, PositivityGI) # wordCount is unique words, text_length is total words.
 ```
+
+```{r}
+has_trump <- rep(NA, 182)
+
+for (i in 1:182){
+  trump_index[i] <- sum(buzzfeed_final_ish$title[[i]] == ignore.case("Trump"))
+}
+```
+
+
 
 
