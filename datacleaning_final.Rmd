@@ -16,6 +16,7 @@ library(doMC)
 registerDoMC(cores=detectCores())
 library(stringr)
 library(SentimentAnalysis)
+library(searchable)
 ```
 
 ```{r}
@@ -61,5 +62,34 @@ buzzfeed_final_ish <- buzzfeed3 %>%
   mutate(title_length = lengths(title)) %>%
   select(title, text, authors, source,type,WordCount,text_length,title_length,SentimentGI,NegativityGI, PositivityGI) # wordCount is unique words, text_length is total words.
 ```
+
+```{r}
+has_trump <- rep(NA, 182)
+
+for (i in 1:182){
+  has_trump[i] <- sum(buzzfeed_final_ish$title[[i]] == ignore.case("Trump"))
+}
+
+buzzfeed_final_ish <- cbind(buzzfeed_final_ish,has_trump) 
+
+buzzfeed_final_ish <- buzzfeed_final_ish %>%
+  mutate(has_trump = has_trump/title_length)
+```
+
+```{r}
+has_politics <- rep(NA, 182)
+
+for (i in 1:182){
+  has_politics[i] <- sum(buzzfeed_final_ish$title[[i]] == ignore.case("Trump") + buzzfeed_final_ish$title[[i]] == ignore.case("Hillary") + buzzfeed_final_ish$title[[i]] == ignore.case("clinton")+ buzzfeed_final_ish$title[[i]] == ignore.case("democratic") +buzzfeed_final_ish$title[[i]] == ignore.case("republican") + buzzfeed_final_ish$title[[i]] == ignore.case("democratics") +  buzzfeed_final_ish$title[[i]] == ignore.case("republicans") + buzzfeed_final_ish$title[[i]] == ignore.case("politics")) 
+}
+
+buzzfeed_final_ish <- cbind(buzzfeed_final_ish,has_politics) 
+
+buzzfeed_final_ish <- buzzfeed_final_ish %>%
+  mutate(has_politics = has_politics/title_length)
+```
+
+
+
 
 
