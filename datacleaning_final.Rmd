@@ -15,6 +15,7 @@ library(e1071)
 library(doMC)
 registerDoMC(cores=detectCores())
 library(stringr)
+library(SentimentAnalysis)
 ```
 
 ```{r}
@@ -36,6 +37,16 @@ buzzfeed2$title  <- gsub("[^0-9A-Za-z/// ]","<>" , buzzfeed2$title ,ignore.case 
 buzzfeed2$title <- gsub("<>","" , buzzfeed2$title ,ignore.case = TRUE)
 ```
 
+
+```{r}
+sentiment <- analyzeSentiment(buzzfeed2$text)
+
+
+buzzfeed2%>%
+  cbind(sentiment) -> buzzfeed2 #this includes all the sentiment columns, may not need all of them though
+
+```
+
 ```{r}
 buzzfeed3 <- buzzfeed2 %>%
   mutate(text = as.character(text)) %>%
@@ -43,6 +54,9 @@ buzzfeed3 <- buzzfeed2 %>%
   mutate(title = as.character(title)) %>%
   mutate(title = strsplit(title, "\\s+"))
 ```
+
+
+
 
 ```{r}
 buzzfeed_final <- buzzfeed3 %>%
