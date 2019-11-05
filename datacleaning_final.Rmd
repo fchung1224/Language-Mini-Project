@@ -1,0 +1,53 @@
+---
+title: "Data Cleaning"
+author: "Federico Chung, Josh Upadhyay, Zuofu Huang"
+date: "10/31/2019"
+output: html_document
+---
+```{r warning=FALSE, message=FALSE}
+library(ggplot2)
+library(dplyr)
+library(keras)
+library(purrr)
+library(tm)
+# library(RTextTools)
+library(e1071)
+library(doMC)
+registerDoMC(cores=detectCores())
+library(stringr)
+```
+
+```{r}
+buzzfeed <- read.csv("https://www.macalester.edu/~ajohns24/data/buzzfeed.csv")
+```
+
+```{r}
+buzzfeed2 <- buzzfeed %>%
+  mutate(text = as.character(text)) %>%
+  mutate(title = as.character(title))
+```
+
+```{r}
+buzzfeed2$text  <- gsub("[^0-9A-Za-z/// ]","<>" , buzzfeed2$text ,ignore.case = TRUE)
+buzzfeed2$text <- gsub("<>","" , buzzfeed2$text ,ignore.case = TRUE)
+
+
+buzzfeed2$title  <- gsub("[^0-9A-Za-z/// ]","<>" , buzzfeed2$title ,ignore.case = TRUE)
+buzzfeed2$title <- gsub("<>","" , buzzfeed2$title ,ignore.case = TRUE)
+```
+
+```{r}
+buzzfeed3 <- buzzfeed2 %>%
+  mutate(text = as.character(text)) %>%
+  mutate(text = strsplit(text, "\\s+")) %>%
+  mutate(title = as.character(title)) %>%
+  mutate(title = strsplit(title, "\\s+"))
+```
+
+```{r}
+buzzfeed_final <- buzzfeed3 %>%
+  mutate(text_length = lengths(text)) %>%
+  mutate(title_length = lengths(title))
+```
+
+
