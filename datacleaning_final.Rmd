@@ -45,7 +45,7 @@ sentiment <- analyzeSentiment(buzzfeed2$text)
 
 buzzfeed2%>%
   cbind(sentiment) -> buzzfeed2 #this includes all the sentiment columns, may not need all of them though
-
+write.csv(buzzfeed2,"buzzfeed2.csv")
 ```
 
 ```{r}
