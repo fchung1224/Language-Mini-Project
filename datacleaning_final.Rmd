@@ -67,8 +67,13 @@ buzzfeed_final_ish <- buzzfeed3 %>%
 has_trump <- rep(NA, 182)
 
 for (i in 1:182){
-  trump_index[i] <- sum(buzzfeed_final_ish$title[[i]] == ignore.case("Trump"))
+  has_trump[i] <- sum(buzzfeed_final_ish$title[[i]] == ignore.case("Trump"))
 }
+
+buzzfeed_final_ish <- cbind(buzzfeed_final_ish,has_trump) 
+
+buzzfeed_final_ish <- buzzfeed_final_ish %>%
+  mutate(has_trump = as.factor(has_trump))
 ```
 
 
