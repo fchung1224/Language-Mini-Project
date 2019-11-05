@@ -80,7 +80,7 @@ buzzfeed_final_ish <- buzzfeed_final_ish %>%
 has_politics <- rep(NA, 182)
 
 for (i in 1:182){
-  has_politics[i] <- sum(buzzfeed_final_ish$title[[i]] == ignore.case("Trump") + buzzfeed_final_ish$title[[i]] == ignore.case("Hillary") + buzzfeed_final_ish$title[[i]] == ignore.case("clinton")+ buzzfeed_final_ish$title[[i]] == ignore.case("democratic") +buzzfeed_final_ish$title[[i]] == ignore.case("republican") + buzzfeed_final_ish$title[[i]] == ignore.case("democratics") +  buzzfeed_final_ish$title[[i]] == ignore.case("republicans") + buzzfeed_final_ish$title[[i]] == ignore.case("politics")) 
+  has_politics[i] <- sum(buzzfeed_final_ish$title[[i]] == ignore.case("Trump")) + sum(buzzfeed_final_ish$title[[i]] == ignore.case("Hillary")) + sum(buzzfeed_final_ish$title[[i]] == ignore.case("clinton"))+ sum(buzzfeed_final_ish$title[[i]] == ignore.case("democratic")) + sum(buzzfeed_final_ish$title[[i]] == ignore.case("republican")) + sum(buzzfeed_final_ish$title[[i]] == ignore.case("democratics")) + sum(buzzfeed_final_ish$title[[i]] == ignore.case("republicans")) + sum(buzzfeed_final_ish$title[[i]] == ignore.case("politics")) + sum(buzzfeed_final_ish$title[[i]] == ignore.case("political")) 
 }
 
 buzzfeed_final_ish <- cbind(buzzfeed_final_ish,has_politics) 
@@ -88,8 +88,6 @@ buzzfeed_final_ish <- cbind(buzzfeed_final_ish,has_politics)
 buzzfeed_final_ish <- buzzfeed_final_ish %>%
   mutate(has_politics = has_politics/title_length)
 ```
-
-
 
 
 
