@@ -12,9 +12,15 @@ library(tidytext)
 
 austen_books()
 
+data(stop_words)
+stop_words
+
 book_words <- austen_books() %>%
   unnest_tokens(word, text) %>%
+  anti_join(stop_words)%>%
   count(book, word, sort = TRUE)
+
+book_words
 
 total_words <- book_words %>% 
   group_by(book) %>% 
@@ -24,12 +30,72 @@ book_words <- left_join(book_words, total_words)
 
 book_words
 ```
+
 ```{r}
 dat<-read.csv("https://www.macalester.edu/~ajohns24/data/buzzfeed.csv")
 
-dataset<-
-  
-  
+data<-read.csv("buzzfeed2.csv")
+
+data
+```
+
+
+```{r}
+data$text<-as.character(data$text)
+
+article_words_no_stopwords <- data %>%
+  unnest_tokens(word, text) %>%
+  anti_join(stop_words)%>%
+  count(type,title, word, sort = TRUE)
+
+article_words<-
+  data%>%
+  unnest_tokens(word,text)%>%
+  count(type,title,word,sort = TRUE)
+
+article_words
+
+tm::stopwords() ##possible use for stopwords
+```
+
+```{r}
+total_words <- article_words %>% 
+  group_by(title) %>% 
+  summarize(total = sum(n))
+
+article_words <- left_join(article_words, total_words)
+article_words
+
+freq_by_rank <- article_words %>% 
+  group_by(title) %>% 
+  mutate(rank = row_number(), 
+         term_frequency = n/total)
+
+freq_by_rank
+
+?bind_tf_idf()
+
+article_words <- article_words %>%
+  bind_tf_idf(word, title, n)
+
+article_words
+```
+```{r}
+article_words %>%
+  select(-total) %>%
+  arrange(desc(tf_idf))
+
+article_words %>%
+  arrange(desc(tf_idf)) %>%
+  mutate(word = factor(word, levels = rev(unique(word)))) %>% 
+  group_by(title) %>% 
+  top_n(15) %>% 
+  ungroup() %>%
+  ggplot(aes(word, tf_idf, fill = title)) +
+  geom_col(show.legend = FALSE) +
+  labs(x = NULL, y = "tf-idf") +
+  facet_wrap(~title, ncol = 2, scales = "free") +
+  coord_flip()
 ```
 
 
