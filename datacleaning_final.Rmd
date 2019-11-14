@@ -17,6 +17,7 @@ library(stringr)
 library(SentimentAnalysis)
 library(searchable)
 library(syuzhet)
+library(caret)
 ```
 
 ### Import Data
@@ -137,8 +138,74 @@ for (i in 1:182){
 buzzfeed_final <- buzzfeed_final[,-c(1:4)]
 ```
 
+# Run algorithms 1: KNN
+
+```{r}
+# Set the seed
+set.seed(253)
+
+# Perform KNN
+knn_model_1 <- train(
+  type ~ .,
+  data = buzzfeed_final,
+  preProcess = c("center","scale"),
+  method = "knn",
+  tuneGrid = data.frame(k = c(1:19, seq(20, 100, by = 10), 182)),
+  trControl = trainControl(method = "cv", number = 10, selectionFunction = "best"),
+  metric = "Accuracy",
+  na.action = na.omit
+)
+```
+
+```{r}
+knn_model_1$bestTune$k
+```
+
+```{r}
+plot(knn_model_1)
+```
+
+## Model 2: Tree
+
+```{r}
+set.seed(253)
+
+tree_model_1 <- train(
+  type ~ .,
+  data = buzzfeed_final,
+  method = "rpart",
+  tuneGrid = data.frame(cp = seq(0, 0.2, length = 60)),
+  trControl = trainControl(method = "cv", number = 10, selectionFunction = "best"),
+  metric = "Accuracy",
+  na.action = na.omit
+)
+```
+
+```{r}
+plot(tree_model_1)
+```
 
 
+## Model 3: Forest
 
+```{r}
+set.seed(253)
+
+tunegrid <- expand.grid(.mtry = c(2,4,9,17))
+
+forest_model_1 <- train(
+    type ~ .,
+    data = buzzfeed_final,
+    method = "rf", 
+    trControl = trainControl(method = "cv", number = 10, selectionFunction = "best"),
+    tuneGrid = tunegrid,
+    metric = "Accuracy",
+    na.action = na.omit
+)
+```
+
+```{r}
+plot(forest_model_1)
+```
 
 
