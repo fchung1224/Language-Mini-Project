@@ -10,13 +10,13 @@ library(dplyr)
 library(keras)
 library(purrr)
 library(tm)
-# library(RTextTools)
 library(e1071)
 library(doMC)
 registerDoMC(cores=detectCores())
 library(stringr)
 library(SentimentAnalysis)
 library(searchable)
+library(syuzhet)
 ```
 
 ### Import Data
@@ -41,18 +41,25 @@ buzzfeed_clean$title  <- gsub("[^0-9A-Za-z/// ]","<>" , buzzfeed_clean$title ,ig
 buzzfeed_clean$title <- gsub("<>","" , buzzfeed_clean$title ,ignore.case = TRUE)
 ```
 
+### wordCount
 
 ```{r}
-# Sentiment has to be analyzed before splitting because the analyzeSentiment function takes in the original text.
-sentiment <- analyzeSentiment(buzzfeed_clean$text)
+# This sentiment function outputs the number of distinct word counts.
+distinct_words <- analyzeSentiment(buzzfeed_clean$text) %>%
+  select(WordCount)
 
-buzzfeed_clean %>%
-   cbind(sentiment) -> buzzfeed_clean #this includes all the sentiment columns, may not need all of them though
-
-buzzfeed2 <- buzzfeed_clean
-
-write.csv("buzzfeed2.csv")
+buzzfeed_clean <- cbind(buzzfeed_clean, distinct_words)
 ```
+
+### Sentiment
+
+```{r}
+sentiment <- get_nrc_sentiment(buzzfeed_clean$text)
+
+buzzfeed_clean <- cbind(buzzfeed_clean, sentiment)
+```
+
+### Value manipulation
 
 ```{r}
 buzzfeed_clean <- buzzfeed_clean %>%
@@ -65,12 +72,7 @@ buzzfeed_clean <- buzzfeed_clean %>%
 ```{r}
 buzzfeed_final <- buzzfeed_clean %>%
   mutate(text_length = lengths(text)) %>%
-  mutate(title_length = lengths(title)) %>%
-  select(title, text, authors, source,type,text_length,title_length) %>%
-  mutate(SentimentGI = sentiment$SentimentGI) %>%
-  mutate(NegativityGI = sentiment$NegativityGI) %>%
-  mutate(PositivityGI = sentiment$PositivityGI) %>%
-  mutate(wordCount = sentiment$WordCount) # wordCount is unique words, text_length is total words.
+  mutate(title_length = lengths(title))
 ```
 
 ### has_Trump
@@ -95,7 +97,7 @@ buzzfeed_final <- cbind(buzzfeed_final,has_trump)
 politics <- rep(NA, 182)
 
 for (i in 1:182){
-  politics[i] <- sum(buzzfeed_final$title[[i]] == ignore.case("Trump")) + sum(buzzfeed_final$title[[i]] == ignore.case("Hillary")) + sum(buzzfeed_final$title[[i]] == ignore.case("clinton"))+ sum(buzzfeed_final$title[[i]] == ignore.case("democratic")) + sum(buzzfeed_final$title[[i]] == ignore.case("republican")) + sum(buzzfeed_final$title[[i]] == ignore.case("democratics")) + sum(buzzfeed_final$title[[i]] == ignore.case("republicans")) + sum(buzzfeed_final$title[[i]] == ignore.case("politics")) + sum(buzzfeed_final$title[[i]] == ignore.case("political")) 
+  politics[i] <- sum(buzzfeed_final$title[[i]] == ignore.case("Trump")) + sum(buzzfeed_final$title[[i]] == ignore.case("Hillary")) + sum(buzzfeed_final$title[[i]] == ignore.case("clinton"))+ sum(buzzfeed_final$title[[i]] == ignore.case("democratic")) + sum(buzzfeed_final$title[[i]] == ignore.case("republican")) + sum(buzzfeed_final$title[[i]] == ignore.case("democratics")) + sum(buzzfeed_final$title[[i]] == ignore.case("republicans")) + sum(buzzfeed_final$title[[i]] == ignore.case("politics")) + sum(buzzfeed_final$title[[i]] == ignore.case("political")) + sum(buzzfeed_final$title[[i]] == ignore.case("president")) + sum(buzzfeed_final$title[[i]] == ignore.case("presidential"))
 }
 
 buzzfeed_final <- buzzfeed_final %>%
@@ -118,6 +120,23 @@ for (i in 1:182){
 
 buzzfeed_final <- cbind(buzzfeed_final,has_author) 
 ```
+
+### Manipulate in proportion of text length
+
+```{r}
+for (i in 1:182){
+  for (j in 7:17){
+    buzzfeed_final[i,j] <- buzzfeed_final[i,j]/buzzfeed_final[i,18]
+  }
+}
+```
+
+### Kick out title, text, url, authors
+
+```{r}
+buzzfeed_final <- buzzfeed_final[,-c(1:4)]
+```
+
 
 
 
