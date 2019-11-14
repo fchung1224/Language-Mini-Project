@@ -18,6 +18,7 @@ library(SentimentAnalysis)
 library(searchable)
 library(syuzhet)
 library(caret)
+library(gridExtra)
 ```
 
 ### Import Data
@@ -165,6 +166,13 @@ knn_model_1$bestTune$k
 plot(knn_model_1)
 ```
 
+```{r}
+knn_model_1$results %>%
+  filter(k == knn_model_1$bestTune$k) %>%
+  summarize(Accuracy)
+```
+
+
 ## Model 2: Tree
 
 ```{r}
@@ -183,6 +191,12 @@ tree_model_1 <- train(
 
 ```{r}
 plot(tree_model_1)
+```
+
+```{r}
+tree_model_1$results %>%
+  filter(cp == tree_model_1$bestTune$cp) %>%
+  summarize(Accuracy)
 ```
 
 
@@ -207,5 +221,13 @@ forest_model_1 <- train(
 ```{r}
 plot(forest_model_1)
 ```
+
+```{r}
+forest_model_1$results %>%
+  filter(mtry == forest_model_1$finalModel$mtry) %>%
+  summarize(Accuracy)
+```
+
+
 
 
