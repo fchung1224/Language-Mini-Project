@@ -198,17 +198,17 @@ tree_model_1$results %>%
 ```
 
 ```{r}
-variable_importance_tree <- data.frame(importance(tree_model_1$finalModel)) %>% 
+variable_importance_tree <- data.frame(varImp(tree_model_1$finalModel)) %>% 
   mutate(predictor = rownames(.))
 
 # Arrange predictors by importance (most to least)
 variable_importance_tree %>% 
-  arrange(desc(MeanDecreaseGini)) %>% 
+  arrange(desc(Overall)) %>% 
   head()
 
 # Arrange predictors by importance (least to most)
 variable_importance_tree %>% 
-  arrange(MeanDecreaseGini) %>% 
+  arrange(Overall) %>% 
   head()
 ```
 
