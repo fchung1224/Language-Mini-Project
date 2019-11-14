@@ -11,14 +11,13 @@ library(keras)
 library(purrr)
 library(tm)
 library(e1071)
-library(doMC)
-registerDoMC(cores=detectCores())
 library(stringr)
 library(SentimentAnalysis)
 library(searchable)
 library(syuzhet)
 library(caret)
 library(gridExtra)
+library(randomForest)
 ```
 
 ### Import Data
@@ -172,7 +171,6 @@ knn_model_1$results %>%
   summarize(Accuracy)
 ```
 
-
 ## Model 2: Tree
 
 ```{r}
@@ -199,16 +197,32 @@ tree_model_1$results %>%
   summarize(Accuracy)
 ```
 
+```{r}
+variable_importance_tree <- data.frame(importance(tree_model_1$finalModel)) %>% 
+  mutate(predictor = rownames(.))
+
+# Arrange predictors by importance (most to least)
+variable_importance_tree %>% 
+  arrange(desc(MeanDecreaseGini)) %>% 
+  head()
+
+# Arrange predictors by importance (least to most)
+variable_importance_tree %>% 
+  arrange(MeanDecreaseGini) %>% 
+  head()
+```
+
+
 
 ## Model 3: Forest
 
 ```{r}
 set.seed(253)
 
-tunegrid <- expand.grid(.mtry = c(2,4,9,17))
+tunegrid <- expand.grid(.mtry = c(2,4,9,16))
 
 forest_model_1 <- train(
-    type ~ .,
+    type ~ . - source,
     data = buzzfeed_final,
     method = "rf", 
     trControl = trainControl(method = "cv", number = 10, selectionFunction = "best"),
@@ -227,6 +241,22 @@ forest_model_1$results %>%
   filter(mtry == forest_model_1$finalModel$mtry) %>%
   summarize(Accuracy)
 ```
+
+```{r}
+variable_importance <- data.frame(importance(forest_model_1$finalModel)) %>% 
+  mutate(predictor = rownames(.))
+
+# Arrange predictors by importance (most to least)
+variable_importance %>% 
+  arrange(desc(MeanDecreaseGini)) %>% 
+  head()
+
+# Arrange predictors by importance (least to most)
+variable_importance %>% 
+  arrange(MeanDecreaseGini) %>% 
+  head()
+```
+
 
 
 
