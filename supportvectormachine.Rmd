@@ -9,26 +9,6 @@ output: html_document
 library(dplyr)
 library(janeaustenr)
 library(tidytext)
-
-austen_books()
-
-data(stop_words)
-stop_words
-
-book_words <- austen_books() %>%
-  unnest_tokens(word, text) %>%
-  anti_join(stop_words)%>%
-  count(book, word, sort = TRUE)
-
-book_words
-
-total_words <- book_words %>% 
-  group_by(book) %>% 
-  summarize(total = sum(n))
-
-book_words <- left_join(book_words, total_words)
-
-book_words
 ```
 
 ```{r}
@@ -47,56 +27,148 @@ article_words_no_stopwords <- data %>%
   unnest_tokens(word, text) %>%
   anti_join(stop_words)%>%
   count(type,title, word, sort = TRUE)
-
-article_words<-
-  data%>%
-  unnest_tokens(word,text)%>%
-  count(type,title,word,sort = TRUE)
-
-article_words
-
-tm::stopwords() ##possible use for stopwords
 ```
 
+
 ```{r}
-total_words <- article_words %>% 
+##Group by title or do you group by the whole set of real and fake 
+
+total_words <- article_words_no_stopwords %>% 
   group_by(title) %>% 
   summarize(total = sum(n))
 
-article_words <- left_join(article_words, total_words)
-article_words
+article_words_no_stopwords <- left_join(article_words_no_stopwords, total_words)
+article_words_no_stopwords
 
-freq_by_rank <- article_words %>% 
+freq_by_rank <- article_words_no_stopwords %>% 
   group_by(title) %>% 
   mutate(rank = row_number(), 
          term_frequency = n/total)
 
 freq_by_rank
 
-?bind_tf_idf()
 
-article_words <- article_words %>%
+article_words <- article_words_no_stopwords %>%
   bind_tf_idf(word, title, n)
 
 article_words
 ```
-```{r}
-article_words %>%
-  select(-total) %>%
-  arrange(desc(tf_idf))
 
-article_words %>%
-  arrange(desc(tf_idf)) %>%
-  mutate(word = factor(word, levels = rev(unique(word)))) %>% 
-  group_by(title) %>% 
-  top_n(15) %>% 
-  ungroup() %>%
-  ggplot(aes(word, tf_idf, fill = title)) +
-  geom_col(show.legend = FALSE) +
-  labs(x = NULL, y = "tf-idf") +
-  facet_wrap(~title, ncol = 2, scales = "free") +
-  coord_flip()
+###Picking top 500 words that are most common in fake articles and top 500 words that are most common in real 
+```{r}
+top_500_fake<-article_words%>%
+  group_by(word,type)%>%
+  summarize(n = sum(n))%>%
+  arrange(desc(n))%>%
+  filter(type == "fake")%>%
+  head(500)
+
+top_500_real<-article_words%>%
+  group_by(word,type)%>%
+  summarize(n = sum(n))%>%
+  arrange(desc(n))%>%
+  filter(type == "real")%>%
+  head(500)
+  
+top_words<-rbind(top_500_fake,top_500_real)
+
+top_words<-top_words%>%
+  select(word)
+
+nrow(top_words)
+
+top_words_new<- unique(top_words)
+
+nrow(top_words_new)
 ```
+
+```{r}
+library(tidyverse)
+new<-article_words%>%select(-c(n,total,tf,idf))
+colnames(new)<-c("real/fake","Article_Title","word","tf_idf")
+
+all_words<-
+  new%>%
+  spread(key = word,tf_idf, fill=0)
+
+bayes<-new%>%
+  semi_join(top_words_new,by = c("word","word"))
+
+bayes
+
+words_bayes<-
+  bayes%>%
+  spread(key = word,tf_idf, fill=0)
+
+words_bayes
+```
+
+
+```{r}
+library(e1071)
+Naive_Bayes_Model= naiveBayes(`real/fake`~.-Article_Title,data =words_bayes)
+predict(Naive_Bayes_Model, words_bayes[1:10,])
+predict(Naive_Bayes_Model, words_bayes[1:10,], type = "raw")
+
+
+
+pred <- predict(Naive_Bayes_Model, all_words)
+table(pred, all_words$`real/fake`)
+```
+
+
+```{r}
+library(caret)
+set.seed(253)
+
+nb_model <- train(
+  `real/fake` ~ .-Article_Title,
+  data = words_bayes,
+  method = "nb",
+  trControl = trainControl(method = "cv",number = 10),
+  metric = "Accuracy",
+  na.action = na.omit
+)
+
+
+
+confusionMatrix(nb_model)
+```
+
+
+
+### Picking the most predictive words that will determine wether an article is real or fake.
+
+```{r}
+words_bayes
+
+set.seed(253)
+
+forest_model <- train(
+  `real/fake` ~ .-Article_Title,
+  data = words_bayes,
+  method = "rf",
+  tuneGrid = data.frame(mtry = c(2,10,50,60,70,80,90,100,110,120,130,150,200,250,300,350,400,450,500)),
+  trControl = trainControl(method = "oob"),
+  metric = "Accuracy",
+  na.action = na.omit
+)
+words_bayes
+
+coef(forest_model$bestTune$mtry
+
+
+forest_model$finalModel$confusion
+```
+
+
+
+
+
+
+
+
+
 
 
 
