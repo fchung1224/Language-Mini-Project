@@ -222,7 +222,7 @@ set.seed(253)
 tunegrid <- expand.grid(.mtry = c(2,4,9,16))
 
 forest_model_1 <- train(
-    type ~ . - source,
+    type ~ .,
     data = buzzfeed_final,
     method = "rf", 
     trControl = trainControl(method = "cv", number = 10, selectionFunction = "best"),
