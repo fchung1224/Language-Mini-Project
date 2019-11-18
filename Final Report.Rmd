@@ -1,30 +1,206 @@
 ---
-title: "FinalReport"
-author: "Federico Chung"
-date: "11/17/2019"
-output: html_document
+title: "253 Mini-Project 2"
+author: "Federico Chung, Josh Upadhyay, Zuofu Huang"
+date: "11/18/2019"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
 ---
-
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+```{r warning=FALSE, message=FALSE}
+library(ggplot2)
+library(dplyr)
+library(keras)
+library(purrr)
+library(tm)
+library(e1071)
+library(stringr)
+library(SentimentAnalysis)
+library(searchable)
+library(syuzhet)
+library(caret)
+library(gridExtra)
+library(randomForest)
 ```
 
-## R Markdown
+## Process the Data
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
+```{r}
+buzzfeed <- read.csv("https://www.macalester.edu/~ajohns24/data/buzzfeed.csv")
 ```
 
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
+```{r}
+buzzfeed_clean <- buzzfeed %>%
+  mutate(text = as.character(text)) %>%
+  mutate(title = as.character(title))
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+```{r}
+buzzfeed_clean$text  <- gsub("[^0-9A-Za-z/// ]","<>" , buzzfeed_clean$text ,ignore.case = TRUE)
+buzzfeed_clean$text <- gsub("<>","" , buzzfeed_clean$text ,ignore.case = TRUE)
+
+buzzfeed_clean$title  <- gsub("[^0-9A-Za-z/// ]","<>" , buzzfeed_clean$title ,ignore.case = TRUE)
+buzzfeed_clean$title <- gsub("<>","" , buzzfeed_clean$title ,ignore.case = TRUE)
+```
+
+### Define Predictors
+
+#### WordCount
+
+`WordCount`
+
+```{r}
+# We use this sentiment function to merely output the number of distinct word counts.
+distinct_words <- analyzeSentiment(buzzfeed_clean$text) %>%
+  select(WordCount)
+
+buzzfeed_clean <- cbind(buzzfeed_clean, distinct_words)
+```
+
+#### Sentiment
+
+Sentiment elements include: `anger`, `anticipation`, `disgust`,  `fear`, `joy`, `sadness`, `surprise`, `trust`, `negative`, `positive`.
+
+```{r}
+sentiment <- get_nrc_sentiment(buzzfeed_clean$text)
+
+buzzfeed_clean <- cbind(buzzfeed_clean, sentiment)
+```
+
+#### Value manipulation
+
+```{r}
+buzzfeed_clean <- buzzfeed_clean %>%
+  mutate(text = as.character(text)) %>%
+  mutate(text = strsplit(text, "\\s+")) %>%
+  mutate(title = as.character(title)) %>%
+  mutate(title = strsplit(title, "\\s+"))
+```
+
+```{r}
+buzzfeed_final <- buzzfeed_clean %>%
+  mutate(text_length = lengths(text)) %>%
+  mutate(title_length = lengths(title))
+```
+
+#### has_Trump
+
+`has_trump`
+
+```{r}
+has_trump <- rep(NA, 182)
+
+for (i in 1:182){
+  if (sum(buzzfeed_final$title[[i]] == ignore.case("Trump")) > 0){
+    has_trump[i] <- TRUE
+  } else {
+    has_trump[i] <- FALSE
+  }
+}
+
+buzzfeed_final <- cbind(buzzfeed_final,has_trump) 
+```
+
+#### politics
+
+`politics`
+
+```{r}
+politics <- rep(NA, 182)
+
+for (i in 1:182){
+  politics[i] <- sum(buzzfeed_final$title[[i]] == ignore.case("Trump")) + sum(buzzfeed_final$title[[i]] == ignore.case("Hillary")) + sum(buzzfeed_final$title[[i]] == ignore.case("clinton"))+ sum(buzzfeed_final$title[[i]] == ignore.case("democratic")) + sum(buzzfeed_final$title[[i]] == ignore.case("republican")) + sum(buzzfeed_final$title[[i]] == ignore.case("democratics")) + sum(buzzfeed_final$title[[i]] == ignore.case("republicans")) + sum(buzzfeed_final$title[[i]] == ignore.case("politics")) + sum(buzzfeed_final$title[[i]] == ignore.case("political")) + sum(buzzfeed_final$title[[i]] == ignore.case("president")) + sum(buzzfeed_final$title[[i]] == ignore.case("presidential"))
+}
+
+buzzfeed_final <- buzzfeed_final %>%
+  mutate(politics = politics/title_length)
+  # Select off sentimentGI?
+```
+
+#### has_author
+
+`has-author`
+
+```{r}
+has_author <- rep(NA,182)
+
+for (i in 1:182){
+  if (buzzfeed_final[i,3] == ""){
+    has_author[i] <- TRUE
+  } else {
+    has_author[i] <- FALSE
+  }
+}
+
+buzzfeed_final <- cbind(buzzfeed_final,has_author) 
+```
+
+### Finish Cleaning Up
+
+#### Manipulate in proportion of text length
+
+```{r}
+for (i in 1:182){
+  for (j in 7:17){
+    buzzfeed_final[i,j] <- buzzfeed_final[i,j]/buzzfeed_final[i,18]
+  }
+}
+```
+
+#### Kick out title, text, url, authors
+
+```{r}
+buzzfeed_final <- buzzfeed_final[,-c(1:4)]
+```
+
+### Predictors in Action
+
+
+### Drawbacks of Text Analysis
+
+Natural language processing and text analysis is much harder than numerical analysis, for many reasons. It’s hard to get machines to recognize context and ‘read’ words like we do, given they don’t have the years of experience in a language!
+
+It’s also hard to simply use a sentiment dictionary, given words can be dependent on each other (‘I’m so damn mad” vs “I’m so damn happy”). As a result, these approaches still do not come close to the language processing abilities of a human, but we are impressed by the high levels of accuracy we were able to achieve regardless. 
+
+## Analyze
+
+Given this kind of novel data type we are working with, we decided to seek through our toolbox in classifying real and fake news. These include trees/forests, Naive Bayes classfier and ULMFiT, a deep learning approach. 
+
+### Trees/Forests
+
+Among the 
+
+### Naive Bayes Classfier
+
+
+### ULMFiT
+
+This technique works in 2 steps. We first only used the article text to train a LSTM language model, a type of neural network developed to try and predict the next words in a sentence. This allowed our language model’s encoder to become a ‘domain expert’ on political news. 
+
+This encoder (mathematical representation of text) is then used to make our classifier, a different neural network, allowing our classifier to ‘read’ the body of text when determining a real/fake classification. The classifier was trained using the article text, title, and all other default columns given in the buzzfeed.csv. 
+
+An 80:20 train/test split was used, as well as the default levels of regularization techniques, to try and prevent severe overfitting (dropout, weight decay) in the model. 
+
+The levels of dropout, the structure of the language model / classifier, and the process of transfer learning in NLP can all be found in fast.ai’s lesson 4 on NLP. 
+
+More information is in the **appendix**. 
+
+
+
+## Summarize
+
+
+## Contributions
+
+
+## Appendix
+
+1. More information on KNN algorithms:
+
+
+
+2. More information on ULMFiT:
+
+The model first builds a dictionary of the 100 most common words, then tokenizes them, as well as cleans any special symbols. The language model is trained to help the classifier general ‘domain knowledge’ (e.g, how fake and real political articles are generally written). This part of the model, the encoder, is then transplanted into the classifier via transfer learning. From here it’s as simple as using a good loss function to help the model improve test set accuracy. Here’s an example of some text generated by the language model given a prompt: 
+
+![](ULMFiT.png)
