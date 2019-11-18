@@ -1,0 +1,58 @@
+---
+title: "stuff"
+author: "Federico Chung"
+date: "11/14/2019"
+output: html_document
+---
+
+```{r}
+
+```
+
+
+```{r}
+
+article_words %>%
+  arrange(desc(tf_idf)) %>%
+  mutate(word = factor(word, levels = rev(unique(word)))) %>% 
+  group_by(title) %>% 
+  top_n(15) %>% 
+  ungroup() %>%
+  ggplot(aes(word, tf_idf, fill = title)) +
+  geom_col(show.legend = FALSE) +
+  labs(x = NULL, y = "tf-idf") +
+  facet_wrap(~title, ncol = 2, scales = "free") +
+  coord_flip()
+```
+
+```{r}
+#stemming
+library(SnowballC)
+system.time(
+  lemma_unique<-lemma_unique %>%
+    mutate(word_stem = wordStem(word_clean, language="english"))
+)
+lemma_unique
+```
+
+```{r}
+total_words <- article_words %>% 
+  group_by(type) %>% 
+  summarize(total = sum(n))
+
+article_words <- left_join(article_words, total_words)
+article_words
+
+freq_by_rank <- article_words %>% 
+  group_by(type) %>% 
+  mutate(rank = row_number(), 
+         term_frequency = n/total)
+
+freq_by_rank
+
+
+article_words <- article_words %>%
+  bind_tf_idf(word, title, n)
+
+article_words
+```
