@@ -412,11 +412,11 @@ wordcloud2(fake)
 wordcloud2(real)
 ```
 
-From what we can see from the word clouds we can see a difference between real and fake articles. The most prevalent words differ alot. We also see that from the real articles words tend to be more frequent like the presidnetial candidates like mccain, ryan, cruz, and other political terms such as veto and irs. And also sites such as abc, make us classify if the texts are real or fake 
+From what we can see from the word clouds we can see a difference between real and fake articles. The most prevalent words differ alot. We also see that from the real articles words tend to be more frequent like the presidnetial candidates like mccain, ryan, cruz, and other political terms such as veto and irs. And also sites such as abc, make us classify if the texts are real or fake. 
 
 But for the fake articles, words tend to be less common among the articles. And words that are more common in fake articles tend to be part of popular culture like harambe. The website word seems to be common but it is particular to some articles that displayed website mainteinance because there was a failure with the website.  
 
-**ULMFiT Confusion Matrix**
+On the intuitive side, we represent how ULMFiT did in Python and created a **ULMFiT Confusion Matrix** on the **test set**. 
 
 ![](confusion.png) 
 
