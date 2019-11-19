@@ -272,9 +272,67 @@ library(searchable)
 library(syuzhet)
 library(caret)
 library(gridExtra)
-library(randomForest)</code></pre>
+library(randomForest)
+library(tidytext)</code></pre>
 <div id="value-manipulation" class="section level3">
 <h3>Value manipulation</h3>
+<p>For faster analysis and decreased computation time, we made a dictionary of only the 500 most common words.</p>
+<pre class="r"><code>top_500_fake&lt;-article_words%&gt;%
+  group_by(word,type)%&gt;%
+  summarize(n = sum(n))%&gt;%
+  arrange(desc(n))%&gt;%
+  filter(type == &quot;fake&quot;)%&gt;%
+  head(500)
+
+top_500_real&lt;-article_words%&gt;%
+  group_by(word,type)%&gt;%
+  summarize(n = sum(n))%&gt;%
+  arrange(desc(n))%&gt;%
+  filter(type == &quot;real&quot;)%&gt;%
+  head(500)
+  
+top_words&lt;-rbind(top_500_fake,top_500_real)
+
+top_words&lt;-top_words%&gt;%
+  select(word)
+
+nrow(top_words)</code></pre>
+<pre><code>## [1] 1000</code></pre>
+<pre class="r"><code>top_words_new&lt;- unique(top_words)
+
+nrow(top_words_new)</code></pre>
+<pre><code>## [1] 724</code></pre>
+<pre class="r"><code>library(tidyverse)</code></pre>
+<pre><code>## ── Attaching packages ────────────────────</code></pre>
+<pre><code>## ✔ tibble  2.1.3     ✔ readr   1.3.1
+## ✔ tidyr   1.0.0     ✔ forcats 0.4.0</code></pre>
+<pre><code>## ── Conflicts ──── tidyverse_conflicts() ──
+## ✖ NLP::annotate()         masks ggplot2::annotate()
+## ✖ searchable::boundary()  masks stringr::boundary()
+## ✖ searchable::coll()      masks stringr::coll()
+## ✖ randomForest::combine() masks gridExtra::combine(), dplyr::combine()
+## ✖ searchable::detect()    masks purrr::detect()
+## ✖ dplyr::filter()         masks stats::filter()
+## ✖ searchable::fixed()     masks stringr::fixed()
+## ✖ dplyr::lag()            masks stats::lag()
+## ✖ caret::lift()           masks purrr::lift()
+## ✖ randomForest::margin()  masks ggplot2::margin()
+## ✖ searchable::partial()   masks purrr::partial()
+## ✖ searchable::regex()     masks stringr::regex()
+## ✖ searchable::word()      masks stringr::word()</code></pre>
+<pre class="r"><code>new&lt;-article_words%&gt;%select(-c(n,total,tf,idf))
+colnames(new)&lt;-c(&quot;real/fake&quot;,&quot;Article_Title&quot;,&quot;word&quot;,&quot;tf_idf&quot;)
+
+all_words&lt;-
+  new%&gt;%
+  spread(key = word,tf_idf, fill=0)
+
+bayes&lt;-new%&gt;%
+  semi_join(top_words_new,by = c(&quot;word&quot;,&quot;word&quot;))
+
+words_bayes&lt;-
+  bayes%&gt;%
+  spread(key = word,tf_idf, fill=0)</code></pre>
 </div>
 <div id="kick-out-title-text-url-authors" class="section level3">
 <h3>Kick out title, text, url, authors</h3>
@@ -288,6 +346,45 @@ library(randomForest)</code></pre>
 ##  [9] &quot;sadness&quot;      &quot;surprise&quot;     &quot;trust&quot;        &quot;negative&quot;    
 ## [13] &quot;positive&quot;     &quot;text_length&quot;  &quot;title_length&quot; &quot;has_trump&quot;   
 ## [17] &quot;politics&quot;     &quot;has_author&quot;</code></pre>
+<pre class="r"><code>real&lt;-words_bayes%&gt;%
+  filter(`real/fake` == &quot;real&quot;)
+
+fake&lt;-words_bayes[1,]
+
+fake[, colSums(fake != 0) &gt; 0]</code></pre>
+<pre><code>## # A tibble: 1 x 35
+##   `real/fake` Article_Title    `3`    `5`      ä     äî     äô   äôre
+##   &lt;fct&gt;       &lt;fct&gt;          &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;
+## 1 fake        'Reporters' … 0.0296 0.0272 0.0129 0.0239 0.0111 0.0137
+## # … with 27 more variables: äôt &lt;dbl&gt;, äù &lt;dbl&gt;, audience &lt;dbl&gt;,
+## #   bad &lt;dbl&gt;, claim &lt;dbl&gt;, clintons &lt;dbl&gt;, common &lt;dbl&gt;, daily &lt;dbl&gt;,
+## #   day &lt;dbl&gt;, didn &lt;dbl&gt;, evidence &lt;dbl&gt;, found &lt;dbl&gt;, haiti &lt;dbl&gt;,
+## #   hear &lt;dbl&gt;, hillary &lt;dbl&gt;, house &lt;dbl&gt;, left &lt;dbl&gt;, media &lt;dbl&gt;,
+## #   money &lt;dbl&gt;, news &lt;dbl&gt;, people &lt;dbl&gt;, racist &lt;dbl&gt;, reporting &lt;dbl&gt;,
+## #   told &lt;dbl&gt;, trump &lt;dbl&gt;, washington &lt;dbl&gt;, white &lt;dbl&gt;</code></pre>
+<pre class="r"><code>real&lt;-real[1,]
+
+real[, colSums(real !=0)&gt;0]</code></pre>
+<pre><code>## # A tibble: 1 x 77
+##   `real/fake` Article_Title address administration african     äì america
+##   &lt;fct&gt;       &lt;fct&gt;           &lt;dbl&gt;          &lt;dbl&gt;   &lt;dbl&gt;  &lt;dbl&gt;   &lt;dbl&gt;
+## 1 real        ‚ÄúHow Can w…  0.0262         0.0110  0.0287 0.0139 0.00644
+## # … with 70 more variables: american &lt;dbl&gt;, americans &lt;dbl&gt;, äôs &lt;dbl&gt;,
+## #   äôt &lt;dbl&gt;, äôve &lt;dbl&gt;, article &lt;dbl&gt;, attack &lt;dbl&gt;, äù &lt;dbl&gt;,
+## #   äúthe &lt;dbl&gt;, author &lt;dbl&gt;, äúwe &lt;dbl&gt;, bad &lt;dbl&gt;, bring &lt;dbl&gt;,
+## #   brought &lt;dbl&gt;, campaign &lt;dbl&gt;, chaos &lt;dbl&gt;, charlotte &lt;dbl&gt;,
+## #   children &lt;dbl&gt;, cities &lt;dbl&gt;, citizens &lt;dbl&gt;, common &lt;dbl&gt;,
+## #   communities &lt;dbl&gt;, community &lt;dbl&gt;, conduct &lt;dbl&gt;, control &lt;dbl&gt;,
+## #   country &lt;dbl&gt;, crime &lt;dbl&gt;, donald &lt;dbl&gt;, eaglerising.com &lt;dbl&gt;,
+## #   economic &lt;dbl&gt;, endorsed &lt;dbl&gt;, enforcement &lt;dbl&gt;, expressed &lt;dbl&gt;,
+## #   eyes &lt;dbl&gt;, government &lt;dbl&gt;, involved &lt;dbl&gt;, job &lt;dbl&gt;, law &lt;dbl&gt;,
+## #   lead &lt;dbl&gt;, leader &lt;dbl&gt;, life &lt;dbl&gt;, live &lt;dbl&gt;, nation &lt;dbl&gt;,
+## #   necessarily &lt;dbl&gt;, officer &lt;dbl&gt;, opinion &lt;dbl&gt;, past &lt;dbl&gt;,
+## #   peace &lt;dbl&gt;, people &lt;dbl&gt;, protect &lt;dbl&gt;, protest &lt;dbl&gt;, public &lt;dbl&gt;,
+## #   real &lt;dbl&gt;, recent &lt;dbl&gt;, respect &lt;dbl&gt;, result &lt;dbl&gt;, school &lt;dbl&gt;,
+## #   shared &lt;dbl&gt;, solely &lt;dbl&gt;, speech &lt;dbl&gt;, supposed &lt;dbl&gt;, time &lt;dbl&gt;,
+## #   times &lt;dbl&gt;, trump &lt;dbl&gt;, united &lt;dbl&gt;, views &lt;dbl&gt;, violence &lt;dbl&gt;,
+## #   violent &lt;dbl&gt;, wake &lt;dbl&gt;, world &lt;dbl&gt;</code></pre>
 </div>
 </div>
 <div id="drawbacks-of-text-analysis" class="section level1">
@@ -344,9 +441,6 @@ library(randomForest)</code></pre>
 <pre class="r"><code>buzzfeed_final &lt;- buzzfeed_clean %&gt;%
   mutate(text_length = lengths(text)) %&gt;%
   mutate(title_length = lengths(title))</code></pre>
-</div>
-<div id="has_trump" class="section level4">
-<h4>has_Trump</h4>
 <p><code>has_trump</code></p>
 <pre class="r"><code>has_trump &lt;- rep(NA, 182)
 
@@ -359,9 +453,6 @@ for (i in 1:182){
 }
 
 buzzfeed_final &lt;- cbind(buzzfeed_final,has_trump) </code></pre>
-</div>
-<div id="politics" class="section level4">
-<h4>politics</h4>
 <p><code>politics</code></p>
 <pre class="r"><code>politics &lt;- rep(NA, 182)
 
@@ -372,9 +463,6 @@ for (i in 1:182){
 buzzfeed_final &lt;- buzzfeed_final %&gt;%
   mutate(politics = politics/title_length)
   # Select off sentimentGI?</code></pre>
-</div>
-<div id="has_author" class="section level4">
-<h4>has_author</h4>
 <p><code>has-author</code></p>
 <pre class="r"><code>has_author &lt;- rep(NA,182)
 
@@ -423,120 +511,11 @@ buzzfeed_final &lt;- cbind(buzzfeed_final,has_author) </code></pre>
 </div>
 <div id="data-cleaning-and-processing-fed" class="section level2">
 <h2>Data Cleaning and Processing (FED)</h2>
-<p>For faster analysis and decreased computation time, we made a dictionary of only the 500 most common words.</p>
-<pre class="r"><code>top_500_fake&lt;-article_words%&gt;%
-  group_by(word,type)%&gt;%
-  summarize(n = sum(n))%&gt;%
-  arrange(desc(n))%&gt;%
-  filter(type == &quot;fake&quot;)%&gt;%
-  head(500)
-
-top_500_real&lt;-article_words%&gt;%
-  group_by(word,type)%&gt;%
-  summarize(n = sum(n))%&gt;%
-  arrange(desc(n))%&gt;%
-  filter(type == &quot;real&quot;)%&gt;%
-  head(500)
-  
-top_words&lt;-rbind(top_500_fake,top_500_real)
-
-top_words&lt;-top_words%&gt;%
-  select(word)
-
-nrow(top_words)</code></pre>
-<pre><code>## [1] 1000</code></pre>
-<pre class="r"><code>top_words_new&lt;- unique(top_words)
-
-nrow(top_words_new)</code></pre>
-<pre><code>## [1] 724</code></pre>
 </div>
 </div>
 <div id="tf_idf" class="section level1">
 <h1>TF_IDF</h1>
 <pre><code>The Tf-idf approach assumes that the importance of a word is inversely proportional to how often it occurs across all documents.In the case of naive Bayes classifiers and text classification, large differences in performance can be attributed to the choices of stop word removal, stemming, and token-length (number of word pairings we are looking into).</code></pre>
-<pre class="r"><code>library(tidyverse)</code></pre>
-<pre><code>## ── Attaching packages ───────── tidyverse 1.2.1 ──</code></pre>
-<pre><code>## ✔ tibble  2.1.3     ✔ readr   1.3.1
-## ✔ tidyr   1.0.0     ✔ forcats 0.4.0</code></pre>
-<pre><code>## ── Conflicts ──────────── tidyverse_conflicts() ──
-## ✖ NLP::annotate()         masks ggplot2::annotate()
-## ✖ searchable::boundary()  masks stringr::boundary()
-## ✖ searchable::coll()      masks stringr::coll()
-## ✖ randomForest::combine() masks gridExtra::combine(), dplyr::combine()
-## ✖ searchable::detect()    masks purrr::detect()
-## ✖ dplyr::filter()         masks stats::filter()
-## ✖ searchable::fixed()     masks stringr::fixed()
-## ✖ dplyr::lag()            masks stats::lag()
-## ✖ caret::lift()           masks purrr::lift()
-## ✖ randomForest::margin()  masks ggplot2::margin()
-## ✖ searchable::partial()   masks purrr::partial()
-## ✖ searchable::regex()     masks stringr::regex()
-## ✖ searchable::word()      masks stringr::word()</code></pre>
-<pre class="r"><code>new&lt;-article_words%&gt;%select(-c(n,total,tf,idf))
-colnames(new)&lt;-c(&quot;real/fake&quot;,&quot;Article_Title&quot;,&quot;word&quot;,&quot;tf_idf&quot;)
-
-all_words&lt;-
-  new%&gt;%
-  spread(key = word,tf_idf, fill=0)
-
-bayes&lt;-new%&gt;%
-  semi_join(top_words_new,by = c(&quot;word&quot;,&quot;word&quot;))
-
-bayes</code></pre>
-<pre><code>## # A tibble: 11,875 x 4
-##    `real/fake` Article_Title                                  word   tf_idf
-##    &lt;fct&gt;       &lt;fct&gt;                                          &lt;chr&gt;   &lt;dbl&gt;
-##  1 real        The Mystery of Trump‚Äôs Man in Moscow: Carte… äù    0.0138 
-##  2 real        The Mystery of Trump‚Äôs Man in Moscow: Carte… page  0.102  
-##  3 real        The Mystery of Trump‚Äôs Man in Moscow: Carte… äôs   0.00899
-##  4 real        The Mystery of Trump‚Äôs Man in Moscow: Carte… trump 0.0116 
-##  5 real        10 Moments That Mattered From Hillary Clinton… trump 0.0339 
-##  6 real        10 Moments That Mattered From Hillary Clinton… äù    0.0193 
-##  7 real        Is Donald Trump qualified to be president?     äôs   0.0109 
-##  8 real        Clinton vs. Trump: The debate before the deba… äôs   0.0130 
-##  9 real        Is Donald Trump qualified to be president?     trump 0.0222 
-## 10 real        The Mystery of Trump‚Äôs Man in Moscow: Carte… russ… 0.0444 
-## # … with 11,865 more rows</code></pre>
-<pre class="r"><code>words_bayes&lt;-
-  bayes%&gt;%
-  spread(key = word,tf_idf, fill=0)
-
-words_bayes</code></pre>
-<pre><code>## # A tibble: 177 x 726
-##    `real/fake` Article_Title   `1` `101`   `11`  `15`  `20` `2012`  `2013`
-##    &lt;fct&gt;       &lt;fct&gt;         &lt;dbl&gt; &lt;dbl&gt;  &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;  &lt;dbl&gt;   &lt;dbl&gt;
-##  1 fake        'Reporters' …     0     0 0          0     0      0 0      
-##  2 fake        ‚ÄòWe Don‚Äô…     0     0 0          0     0      0 0      
-##  3 fake        ‚ÄúIf You Ca…     0     0 0          0     0      0 0      
-##  4 fake        A Hillary Cl…     0     0 0.0112     0     0      0 0      
-##  5 fake        &quot;ABC Reveals…     0     0 0          0     0      0 0.00852
-##  6 fake        ALERT: Polic…     0     0 0          0     0      0 0      
-##  7 fake        Angela Merke…     0     0 0          0     0      0 0      
-##  8 fake        Australia Vo…     0     0 0          0     0      0 0      
-##  9 fake        Bill And Hil…     0     0 0          0     0      0 0      
-## 10 fake        Bombing Susp…     0     0 0          0     0      0 0      
-## # … with 167 more rows, and 717 more variables: `2014` &lt;dbl&gt;,
-## #   `2015` &lt;dbl&gt;, `2016` &lt;dbl&gt;, `2017` &lt;dbl&gt;, `22` &lt;dbl&gt;, `25` &lt;dbl&gt;,
-## #   `27` &lt;dbl&gt;, `3` &lt;dbl&gt;, `4` &lt;dbl&gt;, `5` &lt;dbl&gt;, `50` &lt;dbl&gt;, `8` &lt;dbl&gt;,
-## #   `9` &lt;dbl&gt;, ä &lt;dbl&gt;, ää &lt;dbl&gt;, abc &lt;dbl&gt;, abedin &lt;dbl&gt;, access &lt;dbl&gt;,
-## #   act &lt;dbl&gt;, action &lt;dbl&gt;, adan &lt;dbl&gt;, add &lt;dbl&gt;, added &lt;dbl&gt;,
-## #   address &lt;dbl&gt;, administration &lt;dbl&gt;, adults &lt;dbl&gt;, advantage &lt;dbl&gt;,
-## #   advertisement &lt;dbl&gt;, advice &lt;dbl&gt;, adviser &lt;dbl&gt;, african &lt;dbl&gt;,
-## #   agents &lt;dbl&gt;, ago &lt;dbl&gt;, agree &lt;dbl&gt;, ahead &lt;dbl&gt;, ahmad &lt;dbl&gt;,
-## #   äì &lt;dbl&gt;, äî &lt;dbl&gt;, aides &lt;dbl&gt;, aids &lt;dbl&gt;, alcohol &lt;dbl&gt;,
-## #   allowed &lt;dbl&gt;, america &lt;dbl&gt;, american &lt;dbl&gt;, americans &lt;dbl&gt;,
-## #   announced &lt;dbl&gt;, answer &lt;dbl&gt;, anti &lt;dbl&gt;, äô &lt;dbl&gt;, äôd &lt;dbl&gt;,
-## #   äôll &lt;dbl&gt;, äôm &lt;dbl&gt;, äôre &lt;dbl&gt;, äôs &lt;dbl&gt;, äôt &lt;dbl&gt;, äôve &lt;dbl&gt;,
-## #   ap &lt;dbl&gt;, apartment &lt;dbl&gt;, apparently &lt;dbl&gt;, appears &lt;dbl&gt;,
-## #   april &lt;dbl&gt;, arpaio &lt;dbl&gt;, article &lt;dbl&gt;, attack &lt;dbl&gt;,
-## #   attacked &lt;dbl&gt;, attacks &lt;dbl&gt;, attempt &lt;dbl&gt;, attention &lt;dbl&gt;,
-## #   attorney &lt;dbl&gt;, äù &lt;dbl&gt;, äúa &lt;dbl&gt;, äúbut &lt;dbl&gt;, audience &lt;dbl&gt;,
-## #   august &lt;dbl&gt;, äúhe &lt;dbl&gt;, äúi &lt;dbl&gt;, äúif &lt;dbl&gt;, äúit &lt;dbl&gt;,
-## #   äúshe &lt;dbl&gt;, äúthat &lt;dbl&gt;, äúthe &lt;dbl&gt;, äúthis &lt;dbl&gt;, author &lt;dbl&gt;,
-## #   authority &lt;dbl&gt;, authors &lt;dbl&gt;, äúwatered &lt;dbl&gt;, äúwe &lt;dbl&gt;,
-## #   äúyou &lt;dbl&gt;, bad &lt;dbl&gt;, ban &lt;dbl&gt;, barack &lt;dbl&gt;, baroni &lt;dbl&gt;,
-## #   based &lt;dbl&gt;, basic &lt;dbl&gt;, believes &lt;dbl&gt;, benefit &lt;dbl&gt;,
-## #   benefits &lt;dbl&gt;, biden &lt;dbl&gt;, bill &lt;dbl&gt;, birth &lt;dbl&gt;, …</code></pre>
 <pre class="r"><code>fake&lt;-word_cloud_fake%&gt;%
   select(word,tf_idf)
 
@@ -552,50 +531,11 @@ wordcloud2(fake)</code></pre>
 <pre><code>From what we can see from the word clouds we can see a difference between real and fake articles. The most prevalent words differ alot. We also see that from the real articles words tend to be more frequent like the presidnetial candidates like mccain, ryan, cruz, and other political terms such as veto and irs. And also sites such as abc, make us classify if the texts are real or fake 
 
 But for the fake articles, words tend to be less common among the articles. And words that are more common in fake articles tend to be part of popular culture like harambe. The website word seems to be common but it is particular to some articles that displayed website mainteinance because there was a failure with the website.  </code></pre>
-<pre class="r"><code>real&lt;-words_bayes%&gt;%
-  filter(`real/fake` == &quot;real&quot;)
-
-fake&lt;-words_bayes[1,]
-
-fake[, colSums(fake != 0) &gt; 0]</code></pre>
-<pre><code>## # A tibble: 1 x 35
-##   `real/fake` Article_Title    `3`    `5`      ä     äî     äô   äôre
-##   &lt;fct&gt;       &lt;fct&gt;          &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;
-## 1 fake        'Reporters' … 0.0296 0.0272 0.0129 0.0239 0.0111 0.0137
-## # … with 27 more variables: äôt &lt;dbl&gt;, äù &lt;dbl&gt;, audience &lt;dbl&gt;,
-## #   bad &lt;dbl&gt;, claim &lt;dbl&gt;, clintons &lt;dbl&gt;, common &lt;dbl&gt;, daily &lt;dbl&gt;,
-## #   day &lt;dbl&gt;, didn &lt;dbl&gt;, evidence &lt;dbl&gt;, found &lt;dbl&gt;, haiti &lt;dbl&gt;,
-## #   hear &lt;dbl&gt;, hillary &lt;dbl&gt;, house &lt;dbl&gt;, left &lt;dbl&gt;, media &lt;dbl&gt;,
-## #   money &lt;dbl&gt;, news &lt;dbl&gt;, people &lt;dbl&gt;, racist &lt;dbl&gt;, reporting &lt;dbl&gt;,
-## #   told &lt;dbl&gt;, trump &lt;dbl&gt;, washington &lt;dbl&gt;, white &lt;dbl&gt;</code></pre>
-<pre class="r"><code>real&lt;-real[1,]
-
-real[, colSums(real !=0)&gt;0]</code></pre>
-<pre><code>## # A tibble: 1 x 77
-##   `real/fake` Article_Title address administration african     äì america
-##   &lt;fct&gt;       &lt;fct&gt;           &lt;dbl&gt;          &lt;dbl&gt;   &lt;dbl&gt;  &lt;dbl&gt;   &lt;dbl&gt;
-## 1 real        ‚ÄúHow Can w…  0.0262         0.0110  0.0287 0.0139 0.00644
-## # … with 70 more variables: american &lt;dbl&gt;, americans &lt;dbl&gt;, äôs &lt;dbl&gt;,
-## #   äôt &lt;dbl&gt;, äôve &lt;dbl&gt;, article &lt;dbl&gt;, attack &lt;dbl&gt;, äù &lt;dbl&gt;,
-## #   äúthe &lt;dbl&gt;, author &lt;dbl&gt;, äúwe &lt;dbl&gt;, bad &lt;dbl&gt;, bring &lt;dbl&gt;,
-## #   brought &lt;dbl&gt;, campaign &lt;dbl&gt;, chaos &lt;dbl&gt;, charlotte &lt;dbl&gt;,
-## #   children &lt;dbl&gt;, cities &lt;dbl&gt;, citizens &lt;dbl&gt;, common &lt;dbl&gt;,
-## #   communities &lt;dbl&gt;, community &lt;dbl&gt;, conduct &lt;dbl&gt;, control &lt;dbl&gt;,
-## #   country &lt;dbl&gt;, crime &lt;dbl&gt;, donald &lt;dbl&gt;, eaglerising.com &lt;dbl&gt;,
-## #   economic &lt;dbl&gt;, endorsed &lt;dbl&gt;, enforcement &lt;dbl&gt;, expressed &lt;dbl&gt;,
-## #   eyes &lt;dbl&gt;, government &lt;dbl&gt;, involved &lt;dbl&gt;, job &lt;dbl&gt;, law &lt;dbl&gt;,
-## #   lead &lt;dbl&gt;, leader &lt;dbl&gt;, life &lt;dbl&gt;, live &lt;dbl&gt;, nation &lt;dbl&gt;,
-## #   necessarily &lt;dbl&gt;, officer &lt;dbl&gt;, opinion &lt;dbl&gt;, past &lt;dbl&gt;,
-## #   peace &lt;dbl&gt;, people &lt;dbl&gt;, protect &lt;dbl&gt;, protest &lt;dbl&gt;, public &lt;dbl&gt;,
-## #   real &lt;dbl&gt;, recent &lt;dbl&gt;, respect &lt;dbl&gt;, result &lt;dbl&gt;, school &lt;dbl&gt;,
-## #   shared &lt;dbl&gt;, solely &lt;dbl&gt;, speech &lt;dbl&gt;, supposed &lt;dbl&gt;, time &lt;dbl&gt;,
-## #   times &lt;dbl&gt;, trump &lt;dbl&gt;, united &lt;dbl&gt;, views &lt;dbl&gt;, violence &lt;dbl&gt;,
-## #   violent &lt;dbl&gt;, wake &lt;dbl&gt;, world &lt;dbl&gt;</code></pre>
 <div id="naive-bayes-model" class="section level2">
 <h2>Naive Bayes Model</h2>
-<pre><code>For naive Bayes classifiers, we assume that all the words are independent of each other. And after we do this, we multiply the probability of each word happening given that something is fake news or not. Using this the classifier identifies whether it is fake news or real news based on the probability at the end. If the probability is higher for fake news we classify the article to be fake. </code></pre>
-<pre><code>For example, if we look at the article &quot;'Reporters' FLEE When Clintons Get EXPOSED!&quot;, we can see that the article includes the words c(bad, clintons and claims) In this naive bayes classifier, our classifier will put certain weights to these words to whether they are more likely to be a real or a fake article. Lets say for example that the probability P(fake|article has bad) = 0.5, P(fake|article has clintons) = 0.7 , and P(fake|article has claims) = 0.1 | P(real|article has bad) = 0.1, P(real has clintons) = 0.3 , and P(real|article has claims) = 0.5. Then our naive bayes classifier will multiply all these probabilities P(fake)= 0.5*0.7*0.1 and P(real) = 0.1*0.3*0.5, and because P(fake)&gt;P(real), our naive bayes classifier classifies this article to be fake. </code></pre>
-<pre><code>There are many different ways to do a naive bayes classifier, we could have done groupings of words instead of just one word. This could give us a better understanding of the sentiment as words such as &quot;bad and worse&quot; carry a negative sentiment if paired up with other words like &quot;not bad&quot; or &quot;not worse&quot;, they change the meaning completelly. But this type of classifier is hard when there are not a lot of words in the article, because </code></pre>
+<p>For naive Bayes classifiers, we assume that all the words are independent of each other. And after we do this, we multiply the probability of each word happening given that something is fake news or not. Using this the classifier identifies whether it is fake news or real news based on the probability at the end. If the probability is higher for fake news we classify the article to be fake.</p>
+<p>For example, if we look at the article “‘Reporters’ FLEE When Clintons Get EXPOSED!”, we can see that the article includes the words c(bad, clintons and claims) In this naive bayes classifier, our classifier will put certain weights to these words to whether they are more likely to be a real or a fake article. Lets say for example that the probability P(fake|article has bad) = 0.5, P(fake|article has clintons) = 0.7 , and P(fake|article has claims) = 0.1 | P(real|article has bad) = 0.1, P(real has clintons) = 0.3 , and P(real|article has claims) = 0.5. Then our naive bayes classifier will multiply all these probabilities P(fake)= 0.5<em>0.7</em>0.1 and P(real) = 0.1<em>0.3</em>0.5, and because P(fake)&gt;P(real), our naive bayes classifier classifies this article to be fake.</p>
+<p>There are many different ways to do a naive bayes classifier, we could have done groupings of words instead of just one word. This could give us a better understanding of the sentiment as words such as “bad and worse” carry a negative sentiment if paired up with other words like “not bad” or “not worse”, they change the meaning completely. But this type of classifier is hard when there are not a lot of words in the article, because</p>
 <pre class="r"><code>library(e1071)
 Naive_Bayes_Model= naiveBayes(`real/fake`~.-Article_Title,data =words_bayes)
 
