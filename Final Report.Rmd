@@ -173,6 +173,169 @@ Among the
 ### Naive Bayes Classfier
 
 
+```{r include=FALSE}
+library(ggplot2)
+library(dplyr)
+library(keras)
+library(purrr)
+library(tm)
+library(e1071)
+library(stringr)
+library(SentimentAnalysis)
+library(searchable)
+library(syuzhet)
+library(caret)
+library(tidytext)
+```
+
+
+##Data Cleaning and Processing (FED)
+
+```{r include=FALSE}
+data<-read.csv("https://www.macalester.edu/~ajohns24/data/buzzfeed.csv")
+```
+
+```{r include=FALSE}
+data$text<-as.character(data$text)
+
+article_words_no_stopwords <- data %>%
+  unnest_tokens(word, text) %>%
+  anti_join(stop_words)%>%
+  count(type,title, word, sort = TRUE)
+```
+
+```{r include = FALSE}
+##Group by title or do you group by the whole set of real and fake 
+
+total_words <- article_words_no_stopwords %>% 
+  group_by(title) %>% 
+  summarize(total = sum(n))
+
+article_words_no_stopwords <- left_join(article_words_no_stopwords, total_words)
+article_words_no_stopwords
+
+freq_by_rank <- article_words_no_stopwords %>% 
+  group_by(title) %>% 
+  mutate(rank = row_number(), 
+         term_frequency = n/total)
+
+freq_by_rank
+
+
+article_words <- article_words_no_stopwords %>%
+  bind_tf_idf(word, title, n)
+
+article_words
+```
+
+###Picking top 500 words that are most common in fake articles and top 500 words that are most common in real 
+```{r}
+top_500_fake<-article_words%>%
+  group_by(word,type)%>%
+  summarize(n = sum(n))%>%
+  arrange(desc(n))%>%
+  filter(type == "fake")%>%
+  head(500)
+
+top_500_real<-article_words%>%
+  group_by(word,type)%>%
+  summarize(n = sum(n))%>%
+  arrange(desc(n))%>%
+  filter(type == "real")%>%
+  head(500)
+  
+top_words<-rbind(top_500_fake,top_500_real)
+
+top_words<-top_words%>%
+  select(word)
+
+nrow(top_words)
+
+top_words_new<- unique(top_words)
+
+nrow(top_words_new)
+```
+
+#TF_IDF
+```{r}
+library(tidyverse)
+new<-article_words%>%select(-c(n,total,tf,idf))
+colnames(new)<-c("real/fake","Article_Title","word","tf_idf")
+
+all_words<-
+  new%>%
+  spread(key = word,tf_idf, fill=0)
+
+bayes<-new%>%
+  semi_join(top_words_new,by = c("word","word"))
+
+bayes
+
+words_bayes<-
+  bayes%>%
+  spread(key = word,tf_idf, fill=0)
+
+words_bayes
+```
+
+
+
+
+```{r include = FALSE}
+library(wordcloud)
+library(wordcloud2)
+
+word_cloud_fake<-new%>%
+  filter(`real/fake` == "fake")%>%
+  arrange(desc(tf_idf))
+word_cloud_real<-new%>%
+  filter(`real/fake` == "real")%>%
+  arrange(desc(tf_idf))
+```
+
+```{r}
+fake<-word_cloud_fake%>%
+  select(word,tf_idf)
+
+real<-word_cloud_real%>%
+  select(word,tf_idf)
+
+wordcloud2(fake)
+```
+
+```{r}
+wordcloud2(real)
+```
+
+```
+From what we can see from the word clouds we can see a difference between real and fake articles. The most prevalent words differ alot. We also see that from the real articles words tend to be more frequent like the presidnetial candidates like mccain, ryan, cruz, and other political terms such as veto and irs. And also sites such as abc, make us classify if the texts are real or fake 
+
+But for the fake articles, words tend to be less common among the articles. And words that are more common in fake articles tend to be part of popular culture like harambe, and things like website. The website word is particular to some articles that displayed because there was a failure with the website.  
+
+```
+
+
+##Naive Bayes Model
+
+```
+For naive Bayes classifiers, we assume that all the words are independent of each other. And after we do this, we multiply the probability of each word happening given that something is fake news or not. Using this the classifier identifies whether it is fake news or real news based on the probability at the end. If the probability is higher for fake news we classify the article to be fake. 
+```
+```
+For example, if we look at the article "'Reporters' FLEE When Clintons Get EXPOSED!", we can see that the article includes the words c(bad, clintons and claims) In this naive bayes classifier, our classifier will put certain weights to these words to whether they are more likely to be a real or a fake article. Lets say for example that the probability P(fake|article has bad) = 0.5, P(fake|article has clintons) = 0.7 , and P(fake|article has claims) = 0.1 | P(real|article has bad) = 0.1, P(real has clintons) = 0.3 , and P(real|article has claims) = 0.5. Then our naive bayes classifier will multiply all these probabilities P(fake)= 0.5*0.7*0.1 and P(real) = 0.1*0.3*0.5, and because P(fake)>P(real), our naive bayes classifier classifies this article to be fake. 
+
+```
+
+```{r}
+library(e1071)
+Naive_Bayes_Model= naiveBayes(`real/fake`~.-Article_Title,data =words_bayes)
+
+
+pred <- predict(Naive_Bayes_Model, all_words)
+table(pred, all_words$`real/fake`)
+```
+
+##Discuss potential drawbacks of text analysis.
+
 ### ULMFiT
 
 This technique works in 2 steps. We first only used the article text to train a LSTM language model, a type of neural network developed to try and predict the next words in a sentence. This allowed our language model’s encoder to become a ‘domain expert’ on political news. 
