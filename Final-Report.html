@@ -3784,7 +3784,8 @@ library(wordcloud2)</code></pre>
 </div>
 <div id="drawbacks-of-text-analysis" class="section level3">
 <h3>Drawbacks of Text Analysis</h3>
-<p>Natural language processing and text analysis is much harder than numerical analysis, for many reasons. It’s hard to get machines to recognize context and ‘read’ words like we do, given they don’t have the years of experience in a language! It’s also hard to simply use a sentiment dictionary, given words can be dependent on each other (‘I’m so damn mad” vs “I’m so damn happy”). As a result, these approaches still do not come close to the language processing abilities of a human, but we are impressed by the high levels of accuracy we were able to achieve regardless.</p>
+<p>Natural language processing and text analysis is much harder than numerical analysis, for many reasons. It’s hard to get machines to recognize context and ‘read’ words like we do, given they don’t have the years of experience in a language!</p>
+<p>It’s also hard to simply use a sentiment dictionary, given words can be dependent on each other (‘I’m so damn mad” vs “I’m so damn happy”). As a result, these approaches still do not come close to the language processing abilities of a human, but we are impressed by the high levels of accuracy we were able to achieve regardless.</p>
 </div>
 </div>
 <div id="tool-1-trees-and-forests" class="section level2">
@@ -3799,7 +3800,7 @@ buzzfeed_clean$text &lt;- gsub(&quot;&lt;&gt;&quot;,&quot;&quot; , buzzfeed_clea
 
 buzzfeed_clean$title  &lt;- gsub(&quot;[^0-9A-Za-z/// ]&quot;,&quot;&lt;&gt;&quot; , buzzfeed_clean$title ,ignore.case = TRUE)
 buzzfeed_clean$title &lt;- gsub(&quot;&lt;&gt;&quot;,&quot;&quot; , buzzfeed_clean$title ,ignore.case = TRUE)</code></pre>
-<p><code>WordCount</code></p>
+<p><code>WordCount</code>: The number of distinct words in a news article</p>
 <pre class="r"><code># This sentiment function outputs the number of distinct word counts.
 distinct_words &lt;- analyzeSentiment(buzzfeed_clean$text) %&gt;%
   select(WordCount)
@@ -3818,7 +3819,7 @@ buzzfeed_clean &lt;- cbind(buzzfeed_clean, sentiment)</code></pre>
 <pre class="r"><code>buzzfeed_final &lt;- buzzfeed_clean %&gt;%
   mutate(text_length = lengths(text)) %&gt;%
   mutate(title_length = lengths(title))</code></pre>
-<p><code>has_trump</code></p>
+<p><code>has_trump</code>: Whether the title contains the word <code>Trump</code></p>
 <pre class="r"><code>has_trump &lt;- rep(NA, 182)
 
 for (i in 1:182){
@@ -3830,7 +3831,7 @@ for (i in 1:182){
 }
 
 buzzfeed_final &lt;- cbind(buzzfeed_final,has_trump) </code></pre>
-<p><code>politics</code></p>
+<p><code>politics</code>: The number of times that the title contains politics-related words</p>
 <pre class="r"><code>politics &lt;- rep(NA, 182)
 
 for (i in 1:182){
@@ -3840,7 +3841,7 @@ for (i in 1:182){
 buzzfeed_final &lt;- buzzfeed_final %&gt;%
   mutate(politics = politics/title_length)
   # Select off sentimentGI?</code></pre>
-<p><code>has_author</code></p>
+<p><code>has_author</code>: Whether the article has an author</p>
 <pre class="r"><code>has_author &lt;- rep(NA,182)
 
 for (i in 1:182){
@@ -3854,16 +3855,24 @@ for (i in 1:182){
 buzzfeed_final &lt;- cbind(buzzfeed_final,has_author) </code></pre>
 <div id="further-manipulation" class="section level4">
 <h4>Further manipulation</h4>
+<p>A lot of predictors we have (e.g. the number of happy words) is largely influenced by the article length. To account for the length, we manipulate variables in proportion of text length.</p>
 <pre class="r"><code>for (i in 1:182){
   for (j in 7:17){
     buzzfeed_final[i,j] &lt;- buzzfeed_final[i,j]/buzzfeed_final[i,18]
   }
-} # Manipulate in proportion of text length</code></pre>
+}</code></pre>
 <pre class="r"><code>buzzfeed_final &lt;- buzzfeed_final[,-c(1:4)] # Kick out title, text, url, authors</code></pre>
 </div>
 </div>
 <div id="predictors-in-action" class="section level3">
 <h3>Predictors in Action</h3>
+<p>To see our predictors in action, let’s find one real article and one fake article to see how our predictors might work.</p>
+<div id="real-article" class="section level4">
+<h4>Real article</h4>
+</div>
+<div id="fake-article" class="section level4">
+<h4>Fake article</h4>
+</div>
 </div>
 <div id="build-the-tree" class="section level3">
 <h3>Build the Tree</h3>
@@ -3947,7 +3956,7 @@ forest_model_1 &lt;- train(
 ## 5         4.509144                    joy
 ## 6         4.381271   sourcehttp://abcn.ws</code></pre>
 <p>It seems as though politico and cnn are reputable sources. It’s also interesting that our feature engineered Word Count and title_length appear as well.</p>
-<p>Here are some of the least important variables for classification, as a comparison:</p>
+<p>Here are some of the least important variables for classification as a comparison:</p>
 <pre class="r"><code>variable_importance %&gt;% 
   arrange(MeanDecreaseGini) %&gt;% 
   head()</code></pre>
@@ -3958,7 +3967,33 @@ forest_model_1 &lt;- train(
 ## 4      0.015420983             sourcehttp://usherald.com
 ## 5      0.033147075    sourcehttp://author.groopspeak.com
 ## 6      0.034684231     sourcehttp://conservativebyte.com</code></pre>
-<p>Again, all source links - I guess the evidence seems to suggest that if a news article from a certain domain is fake, others from that domain will tend to be fake as well.</p>
+<p>Again, source links. We presume that evidence seems to suggest that if a news article from a certain domain is fake, others from that domain will tend to be fake as well. This makes intuitive sense since some sources are known for fake stories!</p>
+</div>
+<div id="comparison" class="section level3">
+<h3>Comparison</h3>
+<p>We build a table to compare the accuracy rate of tree and forest algorithms alongside the KNN algorithm included in the appendix.</p>
+<table>
+<thead>
+<tr class="header">
+<th>Method Name</th>
+<th>Accuracy</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>KNN</td>
+<td>0.797</td>
+</tr>
+<tr class="even">
+<td>Tree</td>
+<td>0.835</td>
+</tr>
+<tr class="odd">
+<td>Forest</td>
+<td>0.813</td>
+</tr>
+</tbody>
+</table>
 </div>
 </div>
 <div id="tool-2-naive-bayes-classifier" class="section level2">
@@ -3984,7 +4019,7 @@ freq_by_rank &lt;- article_words_no_stopwords %&gt;%
 
 article_words &lt;- article_words_no_stopwords %&gt;%
   bind_tf_idf(word, title, n)</code></pre>
-<p>For faster analysis and decreased computation time, we made a dictionary of only the 500 most common words.</p>
+<p>For decreased computation time, we made a dictionary of the 500 most common words with respect to both real and fake news articles.</p>
 <pre class="r"><code>top_500_fake &lt;- article_words %&gt;%
   group_by(word,type) %&gt;%
   summarize(n = sum(n)) %&gt;%
@@ -4024,39 +4059,13 @@ words_bayes &lt;-
   filter(`real/fake` == &quot;real&quot;)
 
 real &lt;- real[1,]
-real[, colSums(real !=0)&gt;0]</code></pre>
-<pre><code>## # A tibble: 1 x 77
-##   `real/fake` Article_Title address administration african     äì america
-##   &lt;fct&gt;       &lt;fct&gt;           &lt;dbl&gt;          &lt;dbl&gt;   &lt;dbl&gt;  &lt;dbl&gt;   &lt;dbl&gt;
-## 1 real        ‚ÄúHow Can w…  0.0262         0.0110  0.0287 0.0139 0.00644
-## # … with 70 more variables: american &lt;dbl&gt;, americans &lt;dbl&gt;, äôs &lt;dbl&gt;,
-## #   äôt &lt;dbl&gt;, äôve &lt;dbl&gt;, article &lt;dbl&gt;, attack &lt;dbl&gt;, äù &lt;dbl&gt;,
-## #   äúthe &lt;dbl&gt;, author &lt;dbl&gt;, äúwe &lt;dbl&gt;, bad &lt;dbl&gt;, bring &lt;dbl&gt;,
-## #   brought &lt;dbl&gt;, campaign &lt;dbl&gt;, chaos &lt;dbl&gt;, charlotte &lt;dbl&gt;,
-## #   children &lt;dbl&gt;, cities &lt;dbl&gt;, citizens &lt;dbl&gt;, common &lt;dbl&gt;,
-## #   communities &lt;dbl&gt;, community &lt;dbl&gt;, conduct &lt;dbl&gt;, control &lt;dbl&gt;,
-## #   country &lt;dbl&gt;, crime &lt;dbl&gt;, donald &lt;dbl&gt;, eaglerising.com &lt;dbl&gt;,
-## #   economic &lt;dbl&gt;, endorsed &lt;dbl&gt;, enforcement &lt;dbl&gt;, expressed &lt;dbl&gt;,
-## #   eyes &lt;dbl&gt;, government &lt;dbl&gt;, involved &lt;dbl&gt;, job &lt;dbl&gt;, law &lt;dbl&gt;,
-## #   lead &lt;dbl&gt;, leader &lt;dbl&gt;, life &lt;dbl&gt;, live &lt;dbl&gt;, nation &lt;dbl&gt;,
-## #   necessarily &lt;dbl&gt;, officer &lt;dbl&gt;, opinion &lt;dbl&gt;, past &lt;dbl&gt;,
-## #   peace &lt;dbl&gt;, people &lt;dbl&gt;, protect &lt;dbl&gt;, protest &lt;dbl&gt;, public &lt;dbl&gt;,
-## #   real &lt;dbl&gt;, recent &lt;dbl&gt;, respect &lt;dbl&gt;, result &lt;dbl&gt;, school &lt;dbl&gt;,
-## #   shared &lt;dbl&gt;, solely &lt;dbl&gt;, speech &lt;dbl&gt;, supposed &lt;dbl&gt;, time &lt;dbl&gt;,
-## #   times &lt;dbl&gt;, trump &lt;dbl&gt;, united &lt;dbl&gt;, views &lt;dbl&gt;, violence &lt;dbl&gt;,
-## #   violent &lt;dbl&gt;, wake &lt;dbl&gt;, world &lt;dbl&gt;</code></pre>
-<pre class="r"><code>fake &lt;- words_bayes[1,]
-fake[, colSums(fake != 0) &gt; 0]</code></pre>
-<pre><code>## # A tibble: 1 x 35
-##   `real/fake` Article_Title    `3`    `5`      ä     äî     äô   äôre
-##   &lt;fct&gt;       &lt;fct&gt;          &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;
-## 1 fake        'Reporters' … 0.0296 0.0272 0.0129 0.0239 0.0111 0.0137
-## # … with 27 more variables: äôt &lt;dbl&gt;, äù &lt;dbl&gt;, audience &lt;dbl&gt;,
-## #   bad &lt;dbl&gt;, claim &lt;dbl&gt;, clintons &lt;dbl&gt;, common &lt;dbl&gt;, daily &lt;dbl&gt;,
-## #   day &lt;dbl&gt;, didn &lt;dbl&gt;, evidence &lt;dbl&gt;, found &lt;dbl&gt;, haiti &lt;dbl&gt;,
-## #   hear &lt;dbl&gt;, hillary &lt;dbl&gt;, house &lt;dbl&gt;, left &lt;dbl&gt;, media &lt;dbl&gt;,
-## #   money &lt;dbl&gt;, news &lt;dbl&gt;, people &lt;dbl&gt;, racist &lt;dbl&gt;, reporting &lt;dbl&gt;,
-## #   told &lt;dbl&gt;, trump &lt;dbl&gt;, washington &lt;dbl&gt;, white &lt;dbl&gt;</code></pre>
+# real[, colSums(real !=0)&gt;0] 
+
+fake &lt;- words_bayes[1,]
+# fake[, colSums(fake != 0) &gt; 0]</code></pre>
+</div>
+<div id="build-the-model" class="section level3">
+<h3>Build the Model</h3>
 <pre class="r"><code>Naive_Bayes_Model &lt;- naiveBayes(`real/fake`~.-Article_Title, data = words_bayes)
 
 pred &lt;- predict(Naive_Bayes_Model, all_words)
@@ -4065,6 +4074,7 @@ pred &lt;- predict(Naive_Bayes_Model, all_words)
 ## pred   fake real
 ##   fake   82    2
 ##   real    5   89</code></pre>
+<p>The result is astonishing! We observe an overall accuracy rate of <span class="math inline">\(\displaystyle{\frac{82+89}{82+89+2+5} = 0.961}\)</span>.</p>
 </div>
 </div>
 <div id="tool-3-tf_idf" class="section level2">

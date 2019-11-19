@@ -43,7 +43,9 @@ Defining predictors is more compatible with the trees/forests algorithms, where 
 
 ### Drawbacks of Text Analysis
 
-Natural language processing and text analysis is much harder than numerical analysis, for many reasons. It’s hard to get machines to recognize context and ‘read’ words like we do, given they don’t have the years of experience in a language! It’s also hard to simply use a sentiment dictionary, given words can be dependent on each other (‘I’m so damn mad” vs “I’m so damn happy”). As a result, these approaches still do not come close to the language processing abilities of a human, but we are impressed by the high levels of accuracy we were able to achieve regardless. 
+Natural language processing and text analysis is much harder than numerical analysis, for many reasons. It’s hard to get machines to recognize context and ‘read’ words like we do, given they don’t have the years of experience in a language!
+
+It’s also hard to simply use a sentiment dictionary, given words can be dependent on each other (‘I’m so damn mad” vs “I’m so damn happy”). As a result, these approaches still do not come close to the language processing abilities of a human, but we are impressed by the high levels of accuracy we were able to achieve regardless. 
 
 ## Tool 1: Trees and Forests
 
@@ -253,7 +255,7 @@ variable_importance %>%
 
 It seems as though politico and cnn are reputable sources. It's also interesting that our feature engineered Word Count and title_length appear as well. 
 
-Here are some of the least important variables for classification, as a comparison: 
+Here are some of the least important variables for classification as a comparison: 
 
 ```{r}
 variable_importance %>% 
@@ -266,6 +268,12 @@ Again, source links. We presume that evidence seems to suggest that if a news ar
 ### Comparison
 
 We build a table to compare the accuracy rate of tree and forest algorithms alongside the KNN algorithm included in the appendix.
+
+Method Name    |Accuracy      |
+---------------|--------------|
+KNN            |0.797         |
+Tree           |0.835         |
+Forest         |0.813         |
 
 ## Tool 2: Naive Bayes Classifier
 
@@ -345,11 +353,13 @@ real <- words_bayes %>%
   filter(`real/fake` == "real")
 
 real <- real[1,]
-real[, colSums(real !=0)>0]
+# real[, colSums(real !=0)>0] 
 
 fake <- words_bayes[1,]
-fake[, colSums(fake != 0) > 0]
+# fake[, colSums(fake != 0) > 0]
 ```
+
+### Build the Model
 
 ```{r}
 Naive_Bayes_Model <- naiveBayes(`real/fake`~.-Article_Title, data = words_bayes)
@@ -396,6 +406,9 @@ In recognition of the influence of words on people, here are two visualizations 
 
 ```{r}
 wordcloud2(fake)
+```
+
+```{r}
 wordcloud2(real)
 ```
 
