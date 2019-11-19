@@ -161,12 +161,16 @@ buzzfeed_clean <- cbind(buzzfeed_clean, distinct_words)
 
 #### Sentiment
 
-Sentiment elements include: `anger`, `anticipation`, `disgust`,  `fear`, `joy`, `sadness`, `surprise`, `trust`, `negative`, `positive`, that were all added to buzzfeed_clean. This is in addition to a column where we tracked mentions of political figures (Trump, Clinton, the republican party), as well as if the article had an author, and the number of distinct word counts. 
+Sentiment elements include: `anger`, `anticipation`, `disgust`,  `fear`, `joy`, `sadness`, `surprise`, `trust`, `negative`, `positive`, that were all added to buzzfeed_clean. This is in addition to a column where we tracked mentions of political figures (`has_trump`,`politics`) (Trump, Clinton, the republican party), as well as if the article had an author, and the number of distinct word counts `text_length`, `has_author`, 
 
-```{r}
+```{r, echo = FALSE}
 sentiment <- get_nrc_sentiment(buzzfeed_clean$text)
 
 buzzfeed_clean <- cbind(buzzfeed_clean, sentiment)
+```
+
+```{r}
+colnames(buzzfeed_final)
 ```
 
 
@@ -254,7 +258,7 @@ buzzfeed_final <- buzzfeed_clean %>%
   mutate(title_length = lengths(title))
 ```
 
-#### has_Trump
+
 
 `has_trump`
 
@@ -272,7 +276,7 @@ for (i in 1:182){
 buzzfeed_final <- cbind(buzzfeed_final,has_trump) 
 ```
 
-#### politics
+
 
 `politics`
 
@@ -288,7 +292,6 @@ buzzfeed_final <- buzzfeed_final %>%
   # Select off sentimentGI?
 ```
 
-#### has_author
 
 `has-author`
 
@@ -485,26 +488,37 @@ wordcloud2(fake)
 wordcloud2(real)
 ```
 
+
 ```
 From what we can see from the word clouds we can see a difference between real and fake articles. The most prevalent words differ alot. We also see that from the real articles words tend to be more frequent like the presidnetial candidates like mccain, ryan, cruz, and other political terms such as veto and irs. And also sites such as abc, make us classify if the texts are real or fake 
 
 But for the fake articles, words tend to be less common among the articles. And words that are more common in fake articles tend to be part of popular culture like harambe. The website word seems to be common but it is particular to some articles that displayed website mainteinance because there was a failure with the website.  
 ```
 
+```{r}
+real<-words_bayes%>%
+  filter(`real/fake` == "real")
+
+fake<-words_bayes[1,]
+
+fake[, colSums(fake != 0) > 0]
+
+real<-real[1,]
+
+real[, colSums(real !=0)>0]
+```
 
 ##Naive Bayes Model
 
-```
+
 For naive Bayes classifiers, we assume that all the words are independent of each other. And after we do this, we multiply the probability of each word happening given that something is fake news or not. Using this the classifier identifies whether it is fake news or real news based on the probability at the end. If the probability is higher for fake news we classify the article to be fake. 
-```
 
-```
+
+
 For example, if we look at the article "'Reporters' FLEE When Clintons Get EXPOSED!", we can see that the article includes the words c(bad, clintons and claims) In this naive bayes classifier, our classifier will put certain weights to these words to whether they are more likely to be a real or a fake article. Lets say for example that the probability P(fake|article has bad) = 0.5, P(fake|article has clintons) = 0.7 , and P(fake|article has claims) = 0.1 | P(real|article has bad) = 0.1, P(real has clintons) = 0.3 , and P(real|article has claims) = 0.5. Then our naive bayes classifier will multiply all these probabilities P(fake)= 0.5*0.7*0.1 and P(real) = 0.1*0.3*0.5, and because P(fake)>P(real), our naive bayes classifier classifies this article to be fake. 
-```
 
-```
-There are many different ways to do a naive bayes classifier, we could have done groupings of words instead of just one word. This could give us a better understanding of the sentiment as words such as "bad and worse" carry a negative sentiment if paired up with other words like "not bad" or "not worse", they change the meaning completelly. But this type of classifier is hard when there are not a lot of words in the article, because 
-```
+There are many different ways to do a naive bayes classifier, we could have done groupings of words instead of just one word. This could give us a better understanding of the sentiment as words such as "bad and worse" carry a negative sentiment if paired up with other words like "not bad" or "not worse", they change the meaning completely. But this type of classifier is hard when there are not a lot of words in the article, because 
+
 
 
 ```{r}
@@ -517,6 +531,7 @@ table(pred, all_words$`real/fake`)
 ```
 
 
+**ULMFiT Confusion Matrix**
 ![](confusion.png)
 
 
