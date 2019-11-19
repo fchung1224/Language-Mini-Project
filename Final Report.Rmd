@@ -357,7 +357,6 @@ bayes <- new %>%
 words_bayes <-
   bayes %>%
   spread(key = word,tf_idf, fill=0)
-
 ```
 
 ```{r warning=FALSE, message=FALSE}
@@ -432,7 +431,8 @@ On the intuitive side, we represent how ULMFiT did in Python and created a **ULM
 
 As you can see, both models performed very well in correctly classifying fake news as fake. It's evident that the Naive Bayes model predicted more real news as real compared to ULMFiT, but Naive Bayes did not utilize a test set, while ULMFiT did. In this case, it's evident that Naive Bayes would be the production model of choice, given lower computational requirements and complexity, but it's interesting to see how the deep learning approach fared. 
 
-## Summarize
+## Summary
+
 
 
 ## Contributions
