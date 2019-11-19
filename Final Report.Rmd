@@ -212,6 +212,10 @@ variable_importance_tree %>%
   head()
 ```
 
+Politico and cnn seem to be reputable sources (fortunately!). It's also interesting that our feature engineered Word Count and title_length appear as well.
+
+Regarding the least important predictors, we presume that evidence seems to suggest that if a news article from a certain domain is fake, others from that domain will tend to be fake as well. This makes intuitive sense since some sources are known for fake stories!
+
 ### Build the Forest
 
 Given the total number of 16 predictors, we tuned our forest model with the number of randomly selected predictors to be $2$, $\sqrt{16} = 4$, $\frac{16}{2}= 8$ and $16$.
@@ -255,17 +259,15 @@ variable_importance %>%
   head()
 ```
 
-Politico and cnn seem to be reputable sources (fortunately!). It's also interesting that our feature engineered Word Count and title_length appear as well.
+We observe that our forest model very much agrees with the tree algorithm: politico and cnn sources seem to be manufacturing real news. `WordCount` and `title_length` still remain the top 5 most indicative predictors.
 
-Here are some of the least important variables for classification as a comparison: 
+Here are some of the least important variables for classification as a comparison. Similarly, we observe levels of source links to have the least significance.
 
 ```{r}
 variable_importance %>% 
   arrange(MeanDecreaseGini) %>% 
   head()
 ```
-
-Again, source links. We presume that evidence seems to suggest that if a news article from a certain domain is fake, others from that domain will tend to be fake as well. This makes intuitive sense since some sources are known for fake stories!
 
 ### Comparison
 
@@ -277,7 +279,15 @@ KNN            |0.797         |
 Tree           |0.835         |
 Forest         |0.813         |
 
+**Important to note**, the different levels of source are very much like a cheating predictor! A piece of news from `cnn`, for example, is real by a preponderance of evidence (and possibly beyond a reasonable doubt).
+
 ## Tool 2: Naive Bayes Classifier
+
+We made a dictionary of the 500 most common words that appeared, then made each one a feature in our dataset. This modified dataset was then used to run naive Bayes. The naive Bayes classifier used the Tf-IDF approach which assumes that the importance of a word is inversely proportional to how often it occurs across their respective article. Using the relative frequency per article our classifier used these words as predictors to define if the articles were real or fake. We removed the words are stopwords or other insignificant variables.
+
+For naive Bayes classifiers, we assume that all the words are independent of each other. And after we do this, we multiply the probability of each word happening given that something is fake news or not. Using this the classifier identifies whether it is fake news or real news based on the probability at the end. If the probability is higher for fake news we classify the article to be fake. 
+
+We did not utilize a tuning parameter, but consciously decreased the number of words to be used as predictive features for Naive Bayes to use when making predictions. 
 
 ### Data Cleaning and Manipulation
 
@@ -372,11 +382,9 @@ pred <- predict(Naive_Bayes_Model, all_words)
 
 The result is astonishing! We observe an overall accuracy rate of $\displaystyle{\frac{82+89}{82+89+2+5} = 0.961}$.
 
-## Tool 3: TF_IDF
+## Tool 3: ULMFiT
 
-The Tf-idf approach assumes that the importance of a word is inversely proportional to how often it occurs across all documents.In the case of naive Bayes classifiers and text classification, large differences in performance can be attributed to the choices of stop word removal, stemming, and token-length (number of word pairings we are looking into).
-
-This technique works in 2 steps. We first only used the article text to train a LSTM language model, a type of neural network developed to try and predict the next words in a sentence. This allowed our language model’s encoder to become a ‘domain expert’ on political news. 
+ULMFiT works in 2 steps. We first only used the article text to train a LSTM language model, a type of neural network developed to try and predict the next words in a sentence. This allowed our language model’s encoder to become a ‘domain expert’ on political news. 
 
 This encoder (mathematical representation of text) is then used to make our classifier, a different neural network, allowing our classifier to ‘read’ the body of text when determining a real/fake classification. The classifier was trained using the article text, title, and all other default columns given in the buzzfeed.csv. 
 
