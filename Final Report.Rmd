@@ -23,19 +23,18 @@ library(gridExtra)
 library(randomForest)
 ```
 
-## Process the Data
 
-```{r}
+```{r, echo = FALSE}
 buzzfeed <- read.csv("https://www.macalester.edu/~ajohns24/data/buzzfeed.csv")
 ```
 
-```{r}
+```{r, echo = FALSE}
 buzzfeed_clean <- buzzfeed %>%
   mutate(text = as.character(text)) %>%
   mutate(title = as.character(title))
 ```
 
-```{r}
+```{r, echo = FALSE}
 buzzfeed_clean$text  <- gsub("[^0-9A-Za-z/// ]","<>" , buzzfeed_clean$text ,ignore.case = TRUE)
 buzzfeed_clean$text <- gsub("<>","" , buzzfeed_clean$text ,ignore.case = TRUE)
 
@@ -43,13 +42,116 @@ buzzfeed_clean$title  <- gsub("[^0-9A-Za-z/// ]","<>" , buzzfeed_clean$title ,ig
 buzzfeed_clean$title <- gsub("<>","" , buzzfeed_clean$title ,ignore.case = TRUE)
 ```
 
-### Define Predictors
 
-#### WordCount
+```{r, echo = FALSE}
+# This sentiment function outputs the number of distinct word counts.
+distinct_words <- analyzeSentiment(buzzfeed_clean$text) %>%
+  select(WordCount)
+
+buzzfeed_clean <- cbind(buzzfeed_clean, distinct_words)
+```
+
+
+```{r, echo = FALSE}
+sentiment <- get_nrc_sentiment(buzzfeed_clean$text)
+
+buzzfeed_clean <- cbind(buzzfeed_clean, sentiment)
+```
+
+### Value manipulation
+
+```{r, echo = FALSE}
+buzzfeed_clean <- buzzfeed_clean %>%
+  mutate(text = as.character(text)) %>%
+  mutate(text = strsplit(text, "\\s+")) %>%
+  mutate(title = as.character(title)) %>%
+  mutate(title = strsplit(title, "\\s+"))
+```
+
+```{r, echo = FALSE}
+buzzfeed_final <- buzzfeed_clean %>%
+  mutate(text_length = lengths(text)) %>%
+  mutate(title_length = lengths(title))
+```
+
+
+
+```{r, echo = FALSE}
+has_trump <- rep(NA, 182)
+
+for (i in 1:182){
+  if (sum(buzzfeed_final$title[[i]] == ignore.case("Trump")) > 0){
+    has_trump[i] <- TRUE
+  } else {
+    has_trump[i] <- FALSE
+  }
+}
+
+buzzfeed_final <- cbind(buzzfeed_final,has_trump) 
+```
+
+
+
+```{r, echo=FALSE}
+politics <- rep(NA, 182)
+
+for (i in 1:182){
+  politics[i] <- sum(buzzfeed_final$title[[i]] == ignore.case("Trump")) + sum(buzzfeed_final$title[[i]] == ignore.case("Hillary")) + sum(buzzfeed_final$title[[i]] == ignore.case("clinton"))+ sum(buzzfeed_final$title[[i]] == ignore.case("democratic")) + sum(buzzfeed_final$title[[i]] == ignore.case("republican")) + sum(buzzfeed_final$title[[i]] == ignore.case("democratics")) + sum(buzzfeed_final$title[[i]] == ignore.case("republicans")) + sum(buzzfeed_final$title[[i]] == ignore.case("politics")) + sum(buzzfeed_final$title[[i]] == ignore.case("political")) + sum(buzzfeed_final$title[[i]] == ignore.case("president")) + sum(buzzfeed_final$title[[i]] == ignore.case("presidential"))
+}
+
+buzzfeed_final <- buzzfeed_final %>%
+  mutate(politics = politics/title_length)
+  # Select off sentimentGI?
+```
+
+```{r, echo = FALSE}
+has_author <- rep(NA,182)
+
+for (i in 1:182){
+  if (buzzfeed_final[i,3] == ""){
+    has_author[i] <- TRUE
+  } else {
+    has_author[i] <- FALSE
+  }
+}
+
+buzzfeed_final <- cbind(buzzfeed_final,has_author) 
+```
+
+
+```{r, echo = FALSE}
+for (i in 1:182){
+  for (j in 7:17){
+    buzzfeed_final[i,j] <- buzzfeed_final[i,j]/buzzfeed_final[i,18]
+  }
+}
+```
+
+### Kick out title, text, url, authors
+
+```{r, echo = FALSE}
+buzzfeed_final <- buzzfeed_final[,-c(1:4)]
+```
+
 
 `WordCount`
 
-```{r}
+```{r, echo = FALSE}
+buzzfeed_clean <- buzzfeed %>%
+  mutate(text = as.character(text)) %>%
+  mutate(title = as.character(title))
+```
+
+```{r, echo = FALSE}
+buzzfeed_clean$text  <- gsub("[^0-9A-Za-z/// ]","<>" , buzzfeed_clean$text ,ignore.case = TRUE)
+buzzfeed_clean$text <- gsub("<>","" , buzzfeed_clean$text ,ignore.case = TRUE)
+
+buzzfeed_clean$title  <- gsub("[^0-9A-Za-z/// ]","<>" , buzzfeed_clean$title ,ignore.case = TRUE)
+buzzfeed_clean$title <- gsub("<>","" , buzzfeed_clean$title ,ignore.case = TRUE)
+```
+
+
+```{r, echo = FALSE}
 # We use this sentiment function to merely output the number of distinct word counts.
 distinct_words <- analyzeSentiment(buzzfeed_clean$text) %>%
   select(WordCount)
@@ -59,13 +161,82 @@ buzzfeed_clean <- cbind(buzzfeed_clean, distinct_words)
 
 #### Sentiment
 
-Sentiment elements include: `anger`, `anticipation`, `disgust`,  `fear`, `joy`, `sadness`, `surprise`, `trust`, `negative`, `positive`.
+Sentiment elements include: `anger`, `anticipation`, `disgust`,  `fear`, `joy`, `sadness`, `surprise`, `trust`, `negative`, `positive`, that were all added to buzzfeed_clean. This is in addition to a column where we tracked mentions of political figures (Trump, Clinton, the republican party), as well as if the article had an author, and the number of distinct word counts. 
 
 ```{r}
 sentiment <- get_nrc_sentiment(buzzfeed_clean$text)
 
 buzzfeed_clean <- cbind(buzzfeed_clean, sentiment)
 ```
+
+
+
+#Drawbacks of Text Analysis:
+Natural language processing and text analysis is much harder than numerical analysis, for many reasons. It’s hard to get machines to recognize context and ‘read’ words like we do, given they don’t have the years of experience in a language! It’s also hard to simply use a sentiment dictionary, given words can be dependent on each other (‘I’m so damn mad” vs “I’m so damn happy”). As a result, these approaches still do not come close to the language processing abilities of a human, but we are impressed by the high levels of accuracy we were able to achieve regardless. 
+
+
+
+
+
+```{r, echo=FALSE}
+set.seed(253)
+
+tunegrid <- expand.grid(.mtry = c(2,4,9,16))
+
+forest_model_1 <- train(
+    type ~ .,
+    data = buzzfeed_final,
+    method = "rf", 
+    trControl = trainControl(method = "cv", number = 10, selectionFunction = "best"),
+    tuneGrid = tunegrid,
+    metric = "Accuracy",
+    na.action = na.omit
+)
+```
+
+```{r, echo = FALSE}
+plot(forest_model_1)
+```
+
+```{r, echo = FALSE}
+forest_model_1$results %>%
+  filter(mtry == forest_model_1$finalModel$mtry) %>%
+  summarize(Accuracy)
+```
+
+```{r, echo = FALSE}
+variable_importance <- data.frame(importance(forest_model_1$finalModel)) %>% 
+  mutate(predictor = rownames(.))
+
+# Arrange predictors by importance (most to least)
+variable_importance %>% 
+  arrange(desc(MeanDecreaseGini)) %>% 
+  head()
+
+# Arrange predictors by importance (least to most)
+variable_importance %>% 
+  arrange(MeanDecreaseGini) %>% 
+  head()
+```
+
+
+According to our randomforest model, here's some of the most important variables. Interestingly, they're all sources!
+```{r}
+variable_importance %>% 
+  arrange(desc(MeanDecreaseGini)) %>% 
+  head()
+```
+It seems as though politico and cnn are reputable sources. It's also interesting that our feature engineered Word Count and title_length appear as well. 
+
+
+Here are some of the least important variables for classification, as a comparison: 
+```{r}
+variable_importance %>% 
+  arrange(MeanDecreaseGini) %>% 
+  head()
+```
+Again, all source links - I guess the evidence seems to suggest that if a news article from a certain domain is fake, others from that domain will tend to be fake as well. 
+
 
 #### Value manipulation
 
