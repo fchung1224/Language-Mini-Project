@@ -399,7 +399,9 @@ article_words <- article_words_no_stopwords %>%
 article_words
 ```
 
-###Picking top 500 words that are most common in fake articles and top 500 words that are most common in real 
+
+For faster analysis and decreased computation time, we made a dictionary of only the 500 most common words. 
+
 ```{r}
 top_500_fake<-article_words%>%
   group_by(word,type)%>%
@@ -514,7 +516,15 @@ pred <- predict(Naive_Bayes_Model, all_words)
 table(pred, all_words$`real/fake`)
 ```
 
-##Discuss potential drawbacks of text analysis.
+
+![](confusion.png)
+
+
+As you can see, both models performed very well in correctly classifying fake news as fake. It's evident that the Naive Bayes model predicted more real news as real compared to ULMFiT, but Naive Bayes did not utilize a test set, while ULMFiT did. In this case, it's evident that Naive Bayes would be the production model of choice, given lower computational requirements and complexity, but it's interesting to see how the deep learning approach fared. 
+
+
+
+
 
 ### ULMFiT
 
