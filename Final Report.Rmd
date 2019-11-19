@@ -168,7 +168,7 @@ Given this kind of novel data type we are working with, we decided to seek throu
 
 ### Trees/Forests
 
-Among the 
+
 
 ### Naive Bayes Classfier
 
@@ -257,6 +257,11 @@ nrow(top_words_new)
 ```
 
 #TF_IDF
+
+```
+The Tf-idf approach assumes that the importance of a word is inversely proportional to how often it occurs across all documents.In the case of naive Bayes classifiers and text classification, large differences in performance can be attributed to the choices of stop word removal, stemming, and token-length (number of word pairings we are looking into).
+```
+
 ```{r}
 library(tidyverse)
 new<-article_words%>%select(-c(n,total,tf,idf))
@@ -310,8 +315,7 @@ wordcloud2(real)
 ```
 From what we can see from the word clouds we can see a difference between real and fake articles. The most prevalent words differ alot. We also see that from the real articles words tend to be more frequent like the presidnetial candidates like mccain, ryan, cruz, and other political terms such as veto and irs. And also sites such as abc, make us classify if the texts are real or fake 
 
-But for the fake articles, words tend to be less common among the articles. And words that are more common in fake articles tend to be part of popular culture like harambe, and things like website. The website word is particular to some articles that displayed because there was a failure with the website.  
-
+But for the fake articles, words tend to be less common among the articles. And words that are more common in fake articles tend to be part of popular culture like harambe. The website word seems to be common but it is particular to some articles that displayed website mainteinance because there was a failure with the website.  
 ```
 
 
@@ -320,10 +324,15 @@ But for the fake articles, words tend to be less common among the articles. And 
 ```
 For naive Bayes classifiers, we assume that all the words are independent of each other. And after we do this, we multiply the probability of each word happening given that something is fake news or not. Using this the classifier identifies whether it is fake news or real news based on the probability at the end. If the probability is higher for fake news we classify the article to be fake. 
 ```
-```
-For example, if we look at the article "'Reporters' FLEE When Clintons Get EXPOSED!", we can see that the article includes the words c(bad, clintons and claims) In this naive bayes classifier, our classifier will put certain weights to these words to whether they are more likely to be a real or a fake article. Lets say for example that the probability P(fake|article has bad) = 0.5, P(fake|article has clintons) = 0.7 , and P(fake|article has claims) = 0.1 | P(real|article has bad) = 0.1, P(real has clintons) = 0.3 , and P(real|article has claims) = 0.5. Then our naive bayes classifier will multiply all these probabilities P(fake)= 0.5*0.7*0.1 and P(real) = 0.1*0.3*0.5, and because P(fake)>P(real), our naive bayes classifier classifies this article to be fake. 
 
 ```
+For example, if we look at the article "'Reporters' FLEE When Clintons Get EXPOSED!", we can see that the article includes the words c(bad, clintons and claims) In this naive bayes classifier, our classifier will put certain weights to these words to whether they are more likely to be a real or a fake article. Lets say for example that the probability P(fake|article has bad) = 0.5, P(fake|article has clintons) = 0.7 , and P(fake|article has claims) = 0.1 | P(real|article has bad) = 0.1, P(real has clintons) = 0.3 , and P(real|article has claims) = 0.5. Then our naive bayes classifier will multiply all these probabilities P(fake)= 0.5*0.7*0.1 and P(real) = 0.1*0.3*0.5, and because P(fake)>P(real), our naive bayes classifier classifies this article to be fake. 
+```
+
+```
+There are many different ways to do a naive bayes classifier, we could have done groupings of words instead of just one word. This could give us a better understanding of the sentiment as words such as "bad and worse" carry a negative sentiment if paired up with other words like "not bad" or "not worse", they change the meaning completelly. But this type of classifier is hard when there are not a lot of words in the article, because 
+```
+
 
 ```{r}
 library(e1071)
