@@ -6,6 +6,7 @@ output:
   html_document:
     toc: true
     toc_float: true
+    code_folding: hide
 ---
 ## Starting to Roll
 
@@ -36,6 +37,10 @@ buzzfeed <- read.csv("https://www.macalester.edu/~ajohns24/data/buzzfeed.csv")
 
 Given this kind of novel data type we are working with, we decided to seek through our toolbox in classifying real and fake news. These include trees/forests, Naive Bayes classfier and ULMFiT, a deep learning approach. 
 
+Unfortunately, each of these algorithms takes in a different data format, meaning that you would expect a distinct data manipulation section in each of our tools respectively. 
+
+Defining predictors is more compatible with the trees/forests algorithms, where the algorithms take in predictors. The other approaches take in more original texts
+
 ### Drawbacks of Text Analysis
 
 Natural language processing and text analysis is much harder than numerical analysis, for many reasons. It’s hard to get machines to recognize context and ‘read’ words like we do, given they don’t have the years of experience in a language! It’s also hard to simply use a sentiment dictionary, given words can be dependent on each other (‘I’m so damn mad” vs “I’m so damn happy”). As a result, these approaches still do not come close to the language processing abilities of a human, but we are impressed by the high levels of accuracy we were able to achieve regardless. 
@@ -58,7 +63,7 @@ buzzfeed_clean$title  <- gsub("[^0-9A-Za-z/// ]","<>" , buzzfeed_clean$title ,ig
 buzzfeed_clean$title <- gsub("<>","" , buzzfeed_clean$title ,ignore.case = TRUE)
 ```
 
-`WordCount`
+`WordCount`: The number of distinct words in a news article
 
 ```{r}
 # This sentiment function outputs the number of distinct word counts.
@@ -92,7 +97,7 @@ buzzfeed_final <- buzzfeed_clean %>%
   mutate(title_length = lengths(title))
 ```
 
-`has_trump`
+`has_trump`: Whether the title contains the word `Trump`
 
 ```{r}
 has_trump <- rep(NA, 182)
@@ -108,7 +113,7 @@ for (i in 1:182){
 buzzfeed_final <- cbind(buzzfeed_final,has_trump) 
 ```
 
-`politics`
+`politics`: The number of times that the title contains politics-related words
 
 ```{r}
 politics <- rep(NA, 182)
@@ -122,7 +127,7 @@ buzzfeed_final <- buzzfeed_final %>%
   # Select off sentimentGI?
 ```
 
-`has_author`
+`has_author`: Whether the article has an author
 
 ```{r}
 has_author <- rep(NA,182)
@@ -140,12 +145,14 @@ buzzfeed_final <- cbind(buzzfeed_final,has_author)
 
 #### Further manipulation
 
+A lot of predictors we have (e.g. the number of happy words) is largely influenced by the article length. To account for the length, we manipulate variables in proportion of text length.
+
 ```{r}
 for (i in 1:182){
   for (j in 7:17){
     buzzfeed_final[i,j] <- buzzfeed_final[i,j]/buzzfeed_final[i,18]
   }
-} # Manipulate in proportion of text length
+}
 ```
 
 ```{r}
@@ -154,7 +161,56 @@ buzzfeed_final <- buzzfeed_final[,-c(1:4)] # Kick out title, text, url, authors
 
 ### Predictors in Action
 
-### Build the Algorithms
+To see our predictors in action, let's find one real article and one fake article to see how our predictors might work.
+
+#### Real article
+
+
+#### Fake article
+
+
+### Build the Tree
+
+```{r}
+set.seed(253)
+
+tree_model_1 <- train(
+  type ~ .,
+  data = buzzfeed_final,
+  method = "rpart",
+  tuneGrid = data.frame(cp = seq(0, 0.2, length = 60)),
+  trControl = trainControl(method = "cv", number = 10, selectionFunction = "best"),
+  metric = "Accuracy",
+  na.action = na.omit
+)
+```
+
+```{r}
+plot(tree_model_1)
+```
+
+```{r}
+tree_model_1$results %>%
+  filter(cp == tree_model_1$bestTune$cp) %>%
+  summarize(Accuracy)
+```
+
+```{r}
+variable_importance_tree <- data.frame(varImp(tree_model_1$finalModel)) %>% 
+  mutate(predictor = rownames(.))
+
+# Arrange predictors by importance (most to least)
+variable_importance_tree %>% 
+  arrange(desc(Overall)) %>% 
+  head()
+
+# Arrange predictors by importance (least to most)
+variable_importance_tree %>% 
+  arrange(Overall) %>% 
+  head()
+```
+
+### Build the Forest
 
 ```{r}
 set.seed(253)
@@ -185,16 +241,6 @@ forest_model_1$results %>%
 ```{r}
 variable_importance <- data.frame(importance(forest_model_1$finalModel)) %>% 
   mutate(predictor = rownames(.))
-
-# Arrange predictors by importance (most to least)
-variable_importance %>% 
-  arrange(desc(MeanDecreaseGini)) %>% 
-  head()
-
-# Arrange predictors by importance (least to most)
-variable_importance %>% 
-  arrange(MeanDecreaseGini) %>% 
-  head()
 ```
 
 According to our randomforest model, here's some of the most important variables. Interestingly, they're all sources!
@@ -215,30 +261,31 @@ variable_importance %>%
   head()
 ```
 
-Again, all source links - I guess the evidence seems to suggest that if a news article from a certain domain is fake, others from that domain will tend to be fake as well. 
+Again, source links. We presume that evidence seems to suggest that if a news article from a certain domain is fake, others from that domain will tend to be fake as well. This makes intuitive sense since some sources are known for fake stories!
+
+### Comparison
+
+We build a table to compare the accuracy rate of tree and forest algorithms alongside the KNN algorithm included in the appendix.
 
 ## Tool 2: Naive Bayes Classifier
 
 ### Data Cleaning and Manipulation
 
-```{r}
-data$text <- as.character(data$text)
+```{r warning=FALSE, message=FALSE}
+buzzfeed$text <- as.character(buzzfeed$text)
 
-article_words_no_stopwords <- data %>%
+article_words_no_stopwords <- buzzfeed %>%
   unnest_tokens(word, text) %>%
   anti_join(stop_words)%>%
   count(type,title, word, sort = TRUE)
 ```
 
-```{r}
-##Group by title or do you group by the whole set of real and fake 
-
+```{r warning=FALSE, message=FALSE}
 total_words <- article_words_no_stopwords %>% 
   group_by(title) %>% 
   summarize(total = sum(n))
 
 article_words_no_stopwords <- left_join(article_words_no_stopwords, total_words)
-article_words_no_stopwords
 
 freq_by_rank <- article_words_no_stopwords %>% 
   group_by(title) %>% 
@@ -249,8 +296,7 @@ article_words <- article_words_no_stopwords %>%
   bind_tf_idf(word, title, n)
 ```
 
-
-For faster analysis and decreased computation time, we made a dictionary of only the 500 most common words. 
+For decreased computation time, we made a dictionary of the 500 most common words with respect to both real and fake news articles.
 
 ```{r}
 top_500_fake <- article_words %>%
@@ -273,11 +319,12 @@ top_words <- top_words %>%
   select(word)
 
 top_words_new<- unique(top_words)
-
 ```
 
 ```{r}
-new <- article_words%>%select(-c(n,total,tf,idf))
+new <- article_words %>%
+  select(-c(n,total,tf,idf))
+
 colnames(new) <- c("real/fake","Article_Title","word","tf_idf")
 
 all_words <-
@@ -293,18 +340,25 @@ words_bayes <-
 
 ```
 
-```{r}
+```{r warning=FALSE, message=FALSE}
 real <- words_bayes %>%
   filter(`real/fake` == "real")
 
-fake <- words_bayes[1,]
-
-fake[, colSums(fake != 0) > 0]
-
 real <- real[1,]
-
 real[, colSums(real !=0)>0]
+
+fake <- words_bayes[1,]
+fake[, colSums(fake != 0) > 0]
 ```
+
+```{r}
+Naive_Bayes_Model <- naiveBayes(`real/fake`~.-Article_Title, data = words_bayes)
+
+pred <- predict(Naive_Bayes_Model, all_words)
+ table(pred, all_words$`real/fake`)
+```
+
+The result is astonishing! We observe an overall accuracy rate of $\displaystyle{\frac{82+89}{82+89+2+5} = 0.961}$.
 
 ## Tool 3: TF_IDF
 
@@ -321,7 +375,7 @@ The levels of dropout, the structure of the language model / classifier, and the
 More information is in the **appendix**. 
 
 ```{r}
-word_cloud_fake <- new% >%
+word_cloud_fake <- new %>%
   filter(`real/fake` == "fake") %>%
   arrange(desc(tf_idf))
 
@@ -336,7 +390,11 @@ fake <- word_cloud_fake %>%
 
 real <- word_cloud_real %>%
   select(word,tf_idf)
+```
 
+In recognition of the influence of words on people, here are two visualizations that offer more intuition into the importance of distinct words:
+
+```{r}
 wordcloud2(fake)
 wordcloud2(real)
 ```
@@ -346,22 +404,56 @@ From what we can see from the word clouds we can see a difference between real a
 But for the fake articles, words tend to be less common among the articles. And words that are more common in fake articles tend to be part of popular culture like harambe. The website word seems to be common but it is particular to some articles that displayed website mainteinance because there was a failure with the website.  
 
 **ULMFiT Confusion Matrix**
-![](confusion.png)
+
+![](confusion.png) 
 
 As you can see, both models performed very well in correctly classifying fake news as fake. It's evident that the Naive Bayes model predicted more real news as real compared to ULMFiT, but Naive Bayes did not utilize a test set, while ULMFiT did. In this case, it's evident that Naive Bayes would be the production model of choice, given lower computational requirements and complexity, but it's interesting to see how the deep learning approach fared. 
-
 
 ## Summarize
 
 
 ## Contributions
 
+**Zuofu** was responsible for the trees/forest section as well as weaving algorithms and discussions into a cohesive report.
+
+**Josh** was responsible for the ULMFiT section.
+
+**Federico** was responsible for Naive Bayes Classfier section.
 
 ## Appendix
 
 1. More information on KNN algorithms:
 
+```{r warning=FALSE, message=FALSE}
+# Set the seed
+set.seed(253)
 
+# Perform KNN
+knn_model_1 <- train(
+  type ~ .,
+  data = buzzfeed_final,
+  preProcess = c("center","scale"),
+  method = "knn",
+  tuneGrid = data.frame(k = c(1:19, seq(20, 100, by = 10), 182)),
+  trControl = trainControl(method = "cv", number = 10, selectionFunction = "best"),
+  metric = "Accuracy",
+  na.action = na.omit
+)
+```
+
+```{r}
+knn_model_1$bestTune$k
+```
+
+```{r}
+plot(knn_model_1)
+```
+
+```{r}
+knn_model_1$results %>%
+  filter(k == knn_model_1$bestTune$k) %>%
+  summarize(Accuracy)
+```
 
 2. More information on ULMFiT:
 
