@@ -214,10 +214,12 @@ variable_importance_tree %>%
 
 ### Build the Forest
 
+Given the total number of 16 predictors, we tuned our forest model with the number of randomly selected predictors to be $2$, $\sqrt{16} = 4$, $\frac{16}{2}= 8$ and $16$.
+
 ```{r}
 set.seed(253)
 
-tunegrid <- expand.grid(.mtry = c(2,4,9,16))
+tunegrid <- expand.grid(.mtry = c(2,4,8,16))
 
 forest_model_1 <- train(
     type ~ .,
@@ -253,7 +255,7 @@ variable_importance %>%
   head()
 ```
 
-It seems as though politico and cnn are reputable sources. It's also interesting that our feature engineered Word Count and title_length appear as well. 
+Politico and cnn seem to be reputable sources (fortunately!). It's also interesting that our feature engineered Word Count and title_length appear as well.
 
 Here are some of the least important variables for classification as a comparison: 
 
