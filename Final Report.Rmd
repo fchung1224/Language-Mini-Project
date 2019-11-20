@@ -135,10 +135,10 @@ buzzfeed_final <- buzzfeed_final %>%
 has_author <- rep(NA,182)
 
 for (i in 1:182){
-  if (buzzfeed_final[i,3] == ""){
-    has_author[i] <- TRUE
-  } else {
+  if (buzzfeed_clean[i,4] == ""){
     has_author[i] <- FALSE
+  } else {
+    has_author[i] <- TRUE
   }
 }
 
@@ -166,17 +166,29 @@ buzzfeed_final <- buzzfeed_final[,-c(1:4)] # Kick out title, text, url, authors
 To see our predictors in action, let's find one real article and one fake article to see how our predictors might work.
 
 #### Real article
+Title
 ```{r}
-buzzfeed[1,]$text
+buzzfeed[10,]$title
 ```
+```{r}
+buzzfeed_final[10,]
+```
+
+
+
 
 
 #### Fake article
 
+Title
 ```{r}
-buzzfeed[82,]$text
+buzzfeed[101,]$title
+```
+```{r}
+buzzfeed_final[101,]
 ```
 
+As we compare the fake and real article one standout difference between both of them is that the real article contains an author, and the fake article doesnt contain an author. This shows us that if the article was real, then we would expect to see authors in the text. The fake article is also considerably short with only 143 words compared to the real article with 1610 words. 
 
 ### Build the Tree
 
@@ -404,7 +416,7 @@ nb_model$resample$Accuracy
 confusionMatrix(nb_model)
 
 ```
-As we see in here, our CV accuracy goes down to 0.55% just slightly better than just classifying all the articles to be just fake.
+As we see in here, our CV accuracy goes down to 0.55% just slightly better than just classifying all the articles to be just fake. The Naive Bayes Classifier was not a very accurate way to classify the articles to be fake, because it is not very good at classifying new cases.
 
 
 ```{r}
@@ -427,7 +439,7 @@ real <- word_cloud_real %>%
 
 In recognition of the influence of words on people, here are two visualizations that offer more intuition into the importance of distinct words:
 
-#FAKE WORDS
+###FAKE WORDS
 
 ```{r}
 new_fake<-fake%>%
@@ -436,7 +448,7 @@ new_fake<-fake%>%
 wordcloud2(new_fake, size =1.5)
 ```
 
-#REAL WORDS
+###REAL WORDS
 
 ```{r}
 real<-
@@ -444,6 +456,8 @@ real<-
   head(200)
 wordcloud2(real,size =0.3)
 ```
+
+![](real.png) 
 
 From what we can see from the word clouds we can see a difference between real and fake articles. The most prevalent words differ alot. We also see that from the real articles words tend to be more frequent like the presidnetial candidates like mccain, ryan, cruz, and other political terms such as veto and irs. And also sites such as abc, make us classify if the texts are real or fake. 
 
