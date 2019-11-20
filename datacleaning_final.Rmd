@@ -138,6 +138,22 @@ for (i in 1:182){
 buzzfeed_final <- buzzfeed_final[,-c(1:4)]
 ```
 
+```{r}
+real<-words_bayes%>%
+  filter(`real/fake` == "real")
+
+fake<-words_bayes[1,]
+
+fake[, colSums(fake != 0) > 0]
+
+real<-real[1,]
+
+real[, colSums(real !=0)>0]
+```
+
+
+
+
 # Run algorithms 1: KNN
 
 ```{r}
