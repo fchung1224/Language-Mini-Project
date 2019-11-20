@@ -43,9 +43,9 @@ Defining predictors is more compatible with the trees/forests algorithms, where 
 
 ### Drawbacks of Text Analysis
 
-Natural language processing and text analysis is much harder than numerical analysis, for many reasons. It’s hard to get machines to recognize context and ‘read’ words like we do, given they don’t have the years of experience in a language!
+Natural language processing and text analysis is much harder than numerical analysis, for many reasons. It???s hard to get machines to recognize context and ???read??? words like we do, given they don???t have the years of experience in a language!
 
-It’s also hard to simply use a sentiment dictionary, given words can be dependent on each other (‘I’m so damn mad” vs “I’m so damn happy”). As a result, these approaches still do not come close to the language processing abilities of a human, but we are impressed by the high levels of accuracy we were able to achieve regardless. 
+It???s also hard to simply use a sentiment dictionary, given words can be dependent on each other (???I???m so damn mad??? vs ???I???m so damn happy???). As a result, these approaches still do not come close to the language processing abilities of a human, but we are impressed by the high levels of accuracy we were able to achieve regardless. 
 
 ## Tool 1: Trees and Forests
 
@@ -77,7 +77,7 @@ buzzfeed_clean <- cbind(buzzfeed_clean, distinct_words)
 
 `Sentiment`
 
-Sentiment elements include: `anger`, `anticipation`, `disgust`,  `fear`, `joy`, `sadness`, `surprise`, `trust`, `negative`, `positive`, that were all added to buzzfeed_clean. This is in addition to a column where we tracked mentions of political figures (`has_trump`,`politics`) (Trump, Clinton, the republican party), as well as if the article had an author, and the number of distinct word counts `text_length`, `has_author`. 
+Sentiment elements include: `anger`, `anticipation`, `disgust`,  `fear`, `joy`, `sadness`, `surprise`, `trust`, `negative`, `positive`, that were all added to buzzfeed_clean. This is in addition to a column where we tracked mentions of political figures (`has_trump`,`politics`) (Trump, Clinton, the republican party), as well as if the article had an author, and the number of distinct word counts `text_length`, `has_author`. In the case of using Native Bayes, each word became a feature - leading to 500 additional features added to the dataset. 
 
 ```{r}
 sentiment <- get_nrc_sentiment(buzzfeed_clean$text)
@@ -185,7 +185,10 @@ buzzfeed[101,]$title
 buzzfeed_final[101,]
 ```
 
-As we compare the fake and real article one standout difference between both of them is that the real article contains an author, and the fake article doesn't contain an author. This shows us that if the article was real, then we would expect to see authors in the text. The fake article is also considerably short with only 143 words compared to the real article with 1610 words. 
+As we compare the fake and real article one standout difference between both of them is that the real article contains an author, and the fake article doesn't contain an author. The real article also has some `joy`, unlike the fake one, and the fake one has a lot more `anger` compared to the real. Interestingly, however, the fake article is percieved to have a higher level of `trust` compared to the real article. The fake article is also a little shorter. 
+
+Initially we thought we'd be able to easily separate real vs fake articles based on how much emotion existed (fake articles might have more emotion, to sensationalize and elicit a reaction), 
+
 
 ### Build the Tree
 
@@ -213,6 +216,8 @@ tree_model_1$results %>%
   summarize(Accuracy)
 ```
 
+
+**Most important Predictors**
 ```{r}
 variable_importance_tree <- data.frame(varImp(tree_model_1$finalModel)) %>% 
   mutate(predictor = rownames(.))
@@ -221,14 +226,18 @@ variable_importance_tree <- data.frame(varImp(tree_model_1$finalModel)) %>%
 variable_importance_tree %>% 
   arrange(desc(Overall)) %>% 
   head()
+```
 
+**Least Important Predictors**
+```{r}
 # Arrange predictors by importance (least to most)
 variable_importance_tree %>% 
   arrange(Overall) %>% 
   head()
 ```
 
-Politico and cnn seem to be reputable sources (fortunately!). It's also interesting that our feature engineered Word Count and title_length appear as well.
+
+Politico and cnn seem to be reputable sources (fortunately!). It's also interesting that our feature engineered Word Count and title_length appear as well as most important predictors. Given what we saw above in our sample real vs fake, it's possible that longer word count articles tend to be more reputable. 
 
 Regarding the least important predictors, we presume that evidence seems to suggest that if a news article from a certain domain is fake, others from that domain will tend to be fake as well. This makes intuitive sense since some sources are known for fake stories!
 
@@ -465,17 +474,19 @@ But for the fake articles, words tend to be less common among the articles. And 
 
 **So extra --Zuofu**
 
-ULMFiT works in 2 steps. We first only used the article text to train a LSTM language model, a type of neural network developed to try and predict the next words in a sentence. This allowed our language model’s encoder to become a ‘domain expert’ on political news. 
+ULMFiT works in 2 steps. We first only used the article text to train a LSTM language model, a type of neural network developed to try and predict the next words in a sentence. This allowed our language model???s encoder to become a ???domain expert??? on political news. 
 
-This encoder (mathematical representation of text) is then used to make our classifier, a different neural network, allowing our classifier to ‘read’ the body of text when determining a real/fake classification. The classifier was trained using the article text, title, and all other default columns given in the buzzfeed.csv. 
+This encoder (mathematical representation of text) is then used to make our classifier, a different neural network, allowing our classifier to ???read??? the body of text when determining a real/fake classification. The classifier was trained using the article text, title, and all other default columns given in the buzzfeed.csv. 
 
 An 80:20 train/test split was used, as well as the default levels of regularization techniques, to try and prevent severe overfitting (dropout, weight decay) in the model. 
 
-The levels of dropout, the structure of the language model / classifier, and the process of transfer learning in NLP can all be found in fast.ai’s lesson 4 on NLP. 
+The levels of dropout, the structure of the language model / classifier, and the process of transfer learning in NLP can all be found in fast.ai???s lesson 4 on NLP. 
 
 More information is in the **appendix**. 
 
 To show our results, we represent how ULMFiT did in **Python** and created a **ULMFiT Confusion Matrix** on the **test set**. 
+
+Here's a photo of the confusion matrix on the test set, the model's reported accuracy, and a confusion matrix calculated independently. 
 
 ![](confusion.png) 
 
@@ -483,10 +494,29 @@ To show our results, we represent how ULMFiT did in **Python** and created a **U
 
 ![](confusion_numbers.png) 
 
-As you can see, both models performed very well in correctly classifying fake news as fake. It's evident that the Naive Bayes model predicted more real news as real compared to ULMFiT, but Naive Bayes did not utilize a test set, while ULMFiT did. In this case, it's evident that Naive Bayes would be the production model of choice, given lower computational requirements and complexity, but it's interesting to see how the deep learning approach fared. 
+While the model reported a 94.5% accuracy on the training set, calculating the model's accuracy over all the training/testing data reported an accuracy of 82.9%, which is better than the other models. Interestingly, not by much, given the extra computational requirements needed to get this model working!
+
+In the test set, we do see a 100% fake news classification accuracy, however. We'll expand more on this in the summary. 
+
 
 ## Summary
 
+After running all 4 models, this was the final table of results:
+
+Method Name    |Accuracy      |
+---------------|--------------|
+KNN            |0.797         |
+Forest         |0.813         |
+Tree           |0.835         |
+ULMFiT(by hand)|0.829         |
+Naive Bayes    |0.961         |
+
+
+We can see that Naive Bayes was our clear winner, followed closely by the Tree, ULMFiT, then the random forest.
+
+While Naive Bayes performed great, we need to take into consideration that the cross-validated accuracy was 55%, as mentioned above, indicating it probably wouldn't generalize well to classifying unseen data. In that case, we would reccomend using the Tree or the Forest, given their accuracy is AFTER cross validation. (Would most reccomend the Forest, as it benefits from using many trees due to the nature of being an ensembling technique). 
+
+However, if we were working for a large company like Facebook, we might suggest ULMFiT as a means of policing our site. It seems be biased against fake news, and as shown by the test set, is very good at catching them. This might be a good choice when trying to aggresively eliminate fake news given vast computing power and resources :). 
 
 
 ## Contributions
@@ -534,6 +564,6 @@ knn_model_1$results %>%
 
 2. More information on ULMFiT:
 
-The model first builds a dictionary of the 100 most common words, then tokenizes them, as well as cleans any special symbols. The language model is trained to help the classifier general ‘domain knowledge’ (e.g, how fake and real political articles are generally written). This part of the model, the encoder, is then transplanted into the classifier via transfer learning. From here it’s as simple as using a good loss function to help the model improve test set accuracy. Here’s an example of some text generated by the language model given a prompt: 
+The model first builds a dictionary of the 500 most common words, then tokenizes them, as well as cleans any special symbols. The language model is trained to help the classifier general ???domain knowledge??? (e.g, how fake and real political articles are generally written). This part of the model, the encoder, is then transplanted into the classifier via transfer learning. From here it???s as simple as using a good loss function to help the model improve test set accuracy. Here???s an example of some text generated by the language model given a prompt: 
 
 ![](ULMFiT.png)
